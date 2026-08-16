@@ -1,0 +1,32 @@
+{
+  "name": "@renote/canvas-engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Framework-agnostic infinite canvas engine: scene graph, object-type/tool/command registries, ink capture, and rendering. No React, no Tauri.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@renote/core": "workspace:*",
+    "perfect-freehand": "^1.2.2",
+    "pixi.js": "^8.6.6",
+    "tess2": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

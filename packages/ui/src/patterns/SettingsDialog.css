@@ -1,0 +1,87 @@
+.renote-settings-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--renote-dither-pattern);
+  z-index: 1000;
+}
+
+.renote-settings-dialog-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(420px, 90vw);
+  max-height: 80vh;
+  overflow: auto;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  padding: 12px;
+}
+
+.renote-settings-dialog-title {
+  font-size: var(--renote-font-size-xl);
+  font-weight: bold;
+  padding-bottom: 8px;
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+}
+
+/* Reusable wrapper for one settings section — later sections (beyond "Pointer Input") can
+   reuse this class as-is without any change to the dialog chrome above. */
+.renote-settings-dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.renote-settings-dialog-section-title {
+  font-size: var(--renote-font-size-md);
+  font-weight: bold;
+}
+
+.renote-settings-dialog-section-description {
+  margin: 0;
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.7;
+}
+
+.renote-settings-dialog-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.renote-settings-dialog-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.renote-settings-dialog-row-label {
+  font-size: var(--renote-font-size-sm);
+}
+
+.renote-settings-dialog-select {
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-sm);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  border-radius: 0;
+  padding: 2px 4px;
+}
+
+.renote-settings-dialog-number-input {
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-sm);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  border-radius: 0;
+  padding: 2px 4px;
+  width: 5em;
+}

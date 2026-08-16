@@ -1,0 +1,125 @@
+.renote-tree-view {
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-md);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.renote-tree-view-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-right: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--renote-transition-fast),
+    background-color var(--renote-transition-fast);
+}
+
+.renote-tree-view-row:hover:not(.renote-tree-view-row-selected) {
+  color: var(--renote-interactive-hover-color);
+  background: var(--renote-interactive-hover-background);
+}
+
+.renote-tree-view-row-selected {
+  color: var(--renote-color-background);
+  background: var(--renote-color-foreground);
+  transition:
+    color var(--renote-transition-fast),
+    background-color var(--renote-transition-fast);
+}
+
+.renote-tree-view-disclosure {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-xs);
+  color: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  image-rendering: pixelated;
+  transition:
+    color var(--renote-transition-fast),
+    background-color var(--renote-transition-fast);
+}
+
+.renote-tree-view-disclosure:hover {
+  color: var(--renote-interactive-hover-color);
+  background: var(--renote-interactive-hover-background);
+}
+
+.renote-tree-view-disclosure-spacer {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+}
+
+.renote-tree-view-icon {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border: var(--renote-border-width) solid currentColor;
+}
+
+.renote-tree-view-icon-notebook {
+  border-radius: 0 2px 2px 0;
+}
+
+.renote-tree-view-icon-section-group {
+  background: var(--renote-dither-pattern);
+}
+
+.renote-tree-view-icon-section {
+  background: currentColor;
+}
+
+.renote-tree-view-icon-page {
+  border-style: dashed;
+}
+
+.renote-tree-view-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Explicit (not `inherit`) foreground/background: the row it sits in may be in its inverted
+   "selected" state (`.renote-tree-view-row-selected` swaps color/background), which an
+   inherited color here would carry into an input whose own background does NOT invert —
+   producing same-on-same, invisible text while editing the very row that's selected. */
+.renote-tree-view-label-input {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  padding: 0 2px;
+}
+
+/* Drag-and-drop feedback. A hard 2px rule for "drop between these two rows", an inverted row for
+   "drop inside this one" — same 1-bit vocabulary as selection, no translucency. */
+.renote-tree-view-drop-before {
+  box-shadow: inset 0 2px 0 var(--renote-color-foreground);
+}
+
+.renote-tree-view-drop-after {
+  box-shadow: inset 0 -2px 0 var(--renote-color-foreground);
+}
+
+.renote-tree-view-drop-inside {
+  outline: 2px solid var(--renote-color-foreground);
+  outline-offset: -2px;
+}

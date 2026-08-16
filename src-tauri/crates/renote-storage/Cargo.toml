@@ -1,0 +1,20 @@
+[package]
+name = "renote-storage"
+version = "0.0.0"
+edition = "2021"
+description = "Owns the directory-tree source of truth: notebook/section folders, page JSON read/write with versioned migration, and asset (image/audio/ink-blob) I/O. Rust-only — no other crate touches the filesystem for notebook data."
+
+[lib]
+name = "renote_storage"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
+walkdir = "2.5.0"
+
+[dev-dependencies]
+tempfile = "3"

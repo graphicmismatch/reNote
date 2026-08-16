@@ -1,0 +1,37 @@
+.renote-minimap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+}
+
+.renote-minimap-box {
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  cursor: crosshair;
+}
+
+/* Content extent: a thin dashed outline — "there is content roughly here". */
+.renote-minimap-content-rect {
+  position: absolute;
+  box-sizing: border-box;
+  border: var(--renote-border-width) dashed var(--renote-color-border);
+  pointer-events: none;
+}
+
+/* Current viewport: a bold solid outline plus a faint fill, so it stays
+   visually distinct from the content rect even when the two overlap. */
+.renote-minimap-viewport-rect {
+  position: absolute;
+  box-sizing: border-box;
+  border: calc(var(--renote-border-width) * 2) solid var(--renote-color-foreground);
+  background: var(--renote-color-foreground);
+  opacity: 0.25;
+  pointer-events: none;
+}

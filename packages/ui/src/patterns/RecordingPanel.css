@@ -1,0 +1,22 @@
+.renote-recording-panel {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-md);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  z-index: 900;
+}
+
+.renote-recording-panel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d33;
+}

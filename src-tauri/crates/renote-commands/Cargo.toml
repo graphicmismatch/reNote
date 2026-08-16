@@ -1,0 +1,26 @@
+[package]
+name = "renote-commands"
+version = "0.0.0"
+edition = "2021"
+description = "The Tauri #[command] surface. Thin by design: each command validates/shapes its arguments and delegates the real work to renote-storage/renote-index/renote-export/renote-import (wired in as those crates gain real functionality in later phases)."
+
+[lib]
+name = "renote_commands"
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+serde = { version = "1", features = ["derive"] }
+renote-storage = { version = "0.0.0", path = "../renote-storage" }
+renote-index = { version = "0.0.0", path = "../renote-index" }
+renote-import = { version = "0.0.0", path = "../renote-import" }
+renote-export = { version = "0.0.0", path = "../renote-export" }
+renote-audio = { version = "0.0.0", path = "../renote-audio" }
+serde_json = "1.0.151"
+ts-rs = "12"
+uuid = { version = "1", features = ["v4"] }
+# Only used to probe an inserted image's pixel dimensions from its header (see
+# `save_image_asset`) — default-features off since full pixel decoding is never needed here.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
+
+[dev-dependencies]
+tempfile = "3"

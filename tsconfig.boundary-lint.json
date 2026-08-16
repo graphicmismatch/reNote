@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@renote/core": ["packages/core/src/index.ts"],
+      "@renote/canvas-engine": ["packages/canvas-engine/src/index.ts"],
+      "@renote/text-editor": ["packages/text-editor/src/index.ts"],
+      "@renote/ui": ["packages/ui/src/index.ts"],
+      "@renote/storage-client": ["packages/storage-client/src/index.ts"],
+      "@renote/shortcuts": ["packages/shortcuts/src/index.ts"]
+    }
+  },
+  "include": ["packages/**/*.ts", "packages/**/*.tsx", "apps/**/*.ts", "apps/**/*.tsx"]
+}

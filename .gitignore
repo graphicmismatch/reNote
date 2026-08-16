@@ -1,0 +1,39 @@
+node_modules/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+coverage/
+
+# Rust
+target/
+Cargo.lock.bak
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Claude Code local runtime state — skills/ (and any shared settings.json) are
+# checked in for the team, this isn't.
+.claude/settings.local.json
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+
+# Env
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+/.claude

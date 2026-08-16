@@ -1,0 +1,72 @@
+.renote-search-panel {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+}
+
+.renote-search-panel-input {
+  flex: 0 0 auto;
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-md);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  border-radius: 0;
+  padding: 4px 6px;
+  image-rendering: pixelated;
+  outline: none;
+}
+
+.renote-search-panel-input:focus-visible {
+  outline: var(--renote-focus-outline-width) solid var(--renote-focus-outline-color);
+  outline-offset: var(--renote-focus-outline-offset);
+}
+
+.renote-search-panel-empty {
+  padding: 6px;
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.4;
+}
+
+.renote-search-panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.renote-search-panel-result {
+  padding: 4px 6px;
+  cursor: pointer;
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+  transition:
+    color var(--renote-transition-fast),
+    background-color var(--renote-transition-fast);
+}
+
+.renote-search-panel-result:hover {
+  color: var(--renote-interactive-hover-color);
+  background: var(--renote-interactive-hover-background);
+}
+
+.renote-search-panel-result:focus-visible {
+  outline: var(--renote-focus-outline-width) solid var(--renote-focus-outline-color);
+  outline-offset: calc(-1 * var(--renote-focus-outline-width));
+}
+
+.renote-search-panel-result-title {
+  font-size: var(--renote-font-size-md);
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.renote-search-panel-result-snippet {
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

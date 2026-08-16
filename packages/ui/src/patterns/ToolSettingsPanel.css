@@ -1,0 +1,71 @@
+.renote-tool-settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+}
+
+.renote-tool-settings-color-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.renote-tool-settings-swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.renote-tool-settings-swatch {
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  cursor: pointer;
+}
+
+/* Selected-state indicator uses only chrome tokens (never a colored highlight) since the
+   swatch fill itself is already content color, not chrome. A thicker foreground border plus
+   an inset background-colored ring reads as a distinct "target" outline regardless of which
+   content color sits underneath it. */
+.renote-tool-settings-swatch-selected {
+  border-width: calc(var(--renote-border-width) * 2);
+  border-color: var(--renote-color-foreground);
+  box-shadow: inset 0 0 0 2px var(--renote-color-background);
+}
+
+.renote-tool-settings-custom-color {
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  background: none;
+  cursor: pointer;
+}
+
+.renote-tool-settings-width-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.renote-tool-settings-width-label {
+  font-size: var(--renote-font-size-sm);
+}
+
+.renote-tool-settings-width-value {
+  font-weight: bold;
+}
+
+.renote-tool-settings-width-slider {
+  width: 100%;
+}

@@ -1,0 +1,39 @@
+.renote-find-bar {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  z-index: 900;
+}
+
+.renote-find-bar-input {
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-md);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  border-radius: 0;
+  padding: 4px 6px;
+  width: 180px;
+  image-rendering: pixelated;
+  outline: none;
+}
+
+.renote-find-bar-input:focus-visible {
+  outline: var(--renote-focus-outline-width) solid var(--renote-focus-outline-color);
+  outline-offset: var(--renote-focus-outline-offset);
+}
+
+.renote-find-bar-count {
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.6;
+  white-space: nowrap;
+  min-width: 64px;
+}

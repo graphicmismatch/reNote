@@ -1,0 +1,48 @@
+.renote-context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 160px;
+  margin: 0;
+  padding: 2px;
+  list-style: none;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  /* Hard-edged drop shadow rather than a blur: the whole chrome is 1-bit pixel art, and a soft
+     shadow is the one thing that would read as a different design system. */
+  box-shadow: 2px 2px 0 var(--renote-color-border);
+}
+
+.renote-context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 3px 10px;
+  font-family: inherit;
+  font-size: var(--renote-font-size-md);
+  line-height: 1.4;
+  text-align: left;
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.renote-context-menu-item:hover:not(:disabled),
+.renote-context-menu-item:focus-visible {
+  color: var(--renote-color-background);
+  background: var(--renote-color-foreground);
+  outline: none;
+}
+
+.renote-context-menu-item:disabled {
+  color: var(--renote-color-foreground-muted);
+  cursor: default;
+}
+
+.renote-context-menu-grouped {
+  margin-top: 3px;
+  padding-top: 3px;
+  border-top: var(--renote-border-width) solid var(--renote-color-border);
+}

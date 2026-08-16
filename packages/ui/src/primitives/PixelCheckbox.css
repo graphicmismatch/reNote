@@ -1,0 +1,20 @@
+.renote-pixel-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-md);
+  color: var(--renote-color-foreground);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    color var(--renote-transition-fast),
+    background-color var(--renote-transition-fast);
+}
+
+.renote-pixel-checkbox:hover {
+  color: var(--renote-interactive-hover-color);
+  background: var(--renote-interactive-hover-background);
+}

@@ -1,0 +1,86 @@
+.renote-command-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+  background: var(--renote-dither-pattern);
+  z-index: 1000;
+}
+
+.renote-command-palette-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(480px, 90vw);
+  max-height: 60vh;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+}
+
+.renote-command-palette-input {
+  flex: 0 0 auto;
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-lg);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: none;
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+  border-radius: 0;
+  padding: 8px 10px;
+  image-rendering: pixelated;
+  outline: none;
+}
+
+.renote-command-palette-input:focus-visible {
+  outline: var(--renote-focus-outline-width) solid var(--renote-focus-outline-color);
+  outline-offset: var(--renote-focus-outline-offset);
+}
+
+.renote-command-palette-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.renote-command-palette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 10px;
+  font-size: var(--renote-font-size-md);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.renote-command-palette-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.renote-command-palette-item-shortcut {
+  flex: 0 0 auto;
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.6;
+}
+
+.renote-command-palette-item-highlighted {
+  color: var(--renote-color-background);
+  background: var(--renote-color-foreground);
+}
+
+.renote-command-palette-item-highlighted .renote-command-palette-item-shortcut {
+  opacity: 0.8;
+}
+
+.renote-command-palette-empty {
+  padding: 10px;
+  font-size: var(--renote-font-size-md);
+  opacity: 0.6;
+}

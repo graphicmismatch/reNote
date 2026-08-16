@@ -1,0 +1,50 @@
+.renote-autosave-panel {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  gap: 6px;
+}
+
+.renote-autosave-panel-empty-state {
+  padding: 6px;
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.4;
+}
+
+.renote-autosave-panel-entry {
+  /* Stacked, not a single row — same reasoning as TrashPanel's entries: a fixed-width
+     sidebar can't fit a timestamp plus an action button on one line without clipping. */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 6px;
+}
+
+.renote-autosave-panel-entry-info {
+  min-width: 0;
+}
+
+.renote-autosave-panel-entry-name {
+  font-size: var(--renote-font-size-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.renote-autosave-panel-entry-meta {
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.renote-autosave-panel-restore {
+  align-self: flex-start;
+  font-weight: bold;
+  color: var(--renote-color-background);
+  background-color: var(--renote-color-foreground);
+  border-width: calc(var(--renote-border-width) * 2);
+}

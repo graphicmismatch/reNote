@@ -1,0 +1,26 @@
+/*
+ * Static interaction tokens: hover/focus/motion values shared across
+ * `packages/ui`. Unlike `chrome-tokens.ts`, these do not vary by theme — they
+ * either alias the current theme's chrome vars (so they track light/dark
+ * automatically) or are fixed constants — so they live in a plain `:root`
+ * block instead of the ChromeTokens/theme-provider pipeline.
+ */
+:root {
+  /* "Engaged" hover treatment: the same full black/white invert already used
+     by PixelButton:active, .renote-tree-view-row-selected, and the
+     pre-existing Panel/workspace-switcher hover rules. */
+  --renote-interactive-hover-color: var(--renote-color-background);
+  --renote-interactive-hover-background: var(--renote-color-foreground);
+
+  --renote-focus-outline-color: var(--renote-color-accent, var(--renote-color-foreground));
+  --renote-focus-outline-width: 2px;
+  --renote-focus-outline-offset: 1px;
+
+  --renote-transition-fast: 100ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --renote-transition-fast: 0ms;
+  }
+}

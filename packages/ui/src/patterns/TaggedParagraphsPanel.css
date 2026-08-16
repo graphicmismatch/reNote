@@ -1,0 +1,55 @@
+.renote-tagged-paragraphs-panel {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  gap: 6px;
+}
+
+.renote-tagged-paragraphs-panel-empty-state {
+  padding: 6px;
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.4;
+}
+
+.renote-tagged-paragraphs-panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.renote-tagged-paragraphs-panel-entry {
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+}
+
+.renote-tagged-paragraphs-panel-entry-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 4px 6px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.renote-tagged-paragraphs-panel-entry-text {
+  font-size: var(--renote-font-size-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.renote-tagged-paragraphs-panel-entry-page {
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}

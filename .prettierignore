@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+.turbo
+target
+coverage
+pnpm-lock.yaml
+src-tauri/gen
+src-tauri/crates/renote-index/model

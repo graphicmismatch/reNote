@@ -1,0 +1,36 @@
+.renote-pixel-button {
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-md);
+  color: var(--renote-color-foreground);
+  background-color: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  border-radius: 0;
+  padding: 4px 12px;
+  image-rendering: pixelated;
+  cursor: pointer;
+  transition:
+    color var(--renote-transition-fast),
+    background-color var(--renote-transition-fast);
+}
+
+.renote-pixel-button:hover:not(:disabled) {
+  color: var(--renote-interactive-hover-color);
+  background: var(--renote-interactive-hover-background);
+}
+
+.renote-pixel-button:active {
+  color: var(--renote-color-background);
+  background: var(--renote-color-foreground);
+}
+
+.renote-pixel-button:disabled {
+  cursor: default;
+  /* Flat, not `--renote-dither-pattern`: at this checker's 2px pitch the pattern optically
+     averages to solid mid-gray, so ANY single flat text color (including a muted gray)
+     reads with near-zero contrast against it — verified by screenshot, the dithered
+     version was less legible than plain color, not more. Flat muted color/border reads
+     as clearly "disabled" without fighting the text for contrast. */
+  color: var(--renote-color-foreground-muted);
+  background: var(--renote-color-background);
+  border-color: var(--renote-color-foreground-muted);
+}

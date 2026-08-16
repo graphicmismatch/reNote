@@ -1,0 +1,89 @@
+/* Same modal chrome as SettingsDialog.css — see `HelpDialog.tsx`'s doc comment on why the two
+   deliberately look and behave alike — with a wider panel, since this one holds prose rather
+   than a column of controls. */
+.renote-help-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--renote-dither-pattern);
+  z-index: 1000;
+}
+
+.renote-help-dialog-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(640px, 92vw);
+  max-height: 85vh;
+  overflow: auto;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  padding: 12px;
+}
+
+.renote-help-dialog-title-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+}
+
+.renote-help-dialog-title {
+  font-size: var(--renote-font-size-xl);
+  font-weight: bold;
+}
+
+.renote-help-dialog-intro {
+  margin: 0;
+  font-size: var(--renote-font-size-sm);
+}
+
+.renote-help-dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.renote-help-dialog-section-title {
+  margin: 0;
+  font-size: var(--renote-font-size-md);
+  font-weight: bold;
+}
+
+.renote-help-dialog-entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+/* Term above description on a narrow panel, side by side once there is room for a label column
+   — one breakpoint, no JS measuring. */
+.renote-help-dialog-entry {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px 12px;
+}
+
+@media (min-width: 560px) {
+  .renote-help-dialog-entry {
+    grid-template-columns: 11em 1fr;
+  }
+}
+
+.renote-help-dialog-entry-term {
+  font-size: var(--renote-font-size-sm);
+  font-weight: bold;
+}
+
+.renote-help-dialog-entry-description {
+  margin: 0;
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.85;
+}

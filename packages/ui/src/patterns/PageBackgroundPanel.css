@@ -1,0 +1,109 @@
+.renote-page-background-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--renote-dither-pattern);
+  z-index: 1000;
+}
+
+.renote-page-background-panel-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(420px, 90vw);
+  max-height: 80vh;
+  overflow: auto;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  padding: 12px;
+}
+
+.renote-page-background-panel-title {
+  font-size: var(--renote-font-size-xl);
+  font-weight: bold;
+  padding-bottom: 8px;
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+}
+
+.renote-page-background-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.renote-page-background-panel-section-title {
+  font-size: var(--renote-font-size-md);
+  font-weight: bold;
+}
+
+.renote-page-background-panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.renote-page-background-panel-row-label {
+  font-size: var(--renote-font-size-sm);
+}
+
+.renote-page-background-panel-select {
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-sm);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  border-radius: 0;
+  padding: 2px 4px;
+}
+
+.renote-page-background-panel-swatch-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.renote-page-background-panel-swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.renote-page-background-panel-swatch-selected {
+  outline: 2px solid var(--renote-color-accent, var(--renote-color-foreground));
+  outline-offset: 1px;
+}
+
+.renote-page-background-panel-custom-color {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  border-radius: 0;
+  cursor: pointer;
+  background: none;
+}
+
+.renote-page-background-panel-default-button {
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-sm);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  border-radius: 0;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.renote-page-background-panel-default-button[aria-pressed="true"] {
+  outline: 2px solid var(--renote-color-accent, var(--renote-color-foreground));
+  outline-offset: 1px;
+}

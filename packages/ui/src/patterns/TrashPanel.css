@@ -1,0 +1,77 @@
+.renote-trash-panel {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  gap: 6px;
+}
+
+.renote-trash-panel-empty-all {
+  align-self: flex-start;
+  font-weight: bold;
+  color: var(--renote-color-background);
+  background-color: var(--renote-color-foreground);
+}
+
+.renote-trash-panel-empty-all:disabled {
+  color: var(--renote-color-foreground);
+  background-color: var(--renote-color-background);
+}
+
+.renote-trash-panel-empty-state {
+  padding: 6px;
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.4;
+}
+
+.renote-trash-panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.renote-trash-panel-entry {
+  /* Stacked, not a single row: the sidebar is a fixed ~220px, and the entry name plus
+     both action buttons never fit side by side without clipping one or the other (the
+     original single-row layout forced a horizontal scrollbar, which meant you had to
+     scroll to see either what an entry was or the buttons that act on it). Stacking
+     guarantees the full name is always visible above the actions that operate on it. */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 6px;
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+}
+
+.renote-trash-panel-entry-info {
+  min-width: 0;
+}
+
+.renote-trash-panel-entry-name {
+  font-size: var(--renote-font-size-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.renote-trash-panel-entry-meta {
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.renote-trash-panel-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.renote-trash-panel-delete {
+  font-weight: bold;
+  color: var(--renote-color-background);
+  background-color: var(--renote-color-foreground);
+  border-width: calc(var(--renote-border-width) * 2);
+}

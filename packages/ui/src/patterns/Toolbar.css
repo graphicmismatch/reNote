@@ -1,0 +1,31 @@
+.renote-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--renote-font-family);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  padding: 4px;
+}
+
+.renote-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.renote-toolbar-divider {
+  width: var(--renote-border-width);
+  align-self: stretch;
+  margin: 0 4px;
+  background: var(--renote-color-border);
+}
+
+.renote-toolbar-item {
+  padding: 2px 8px;
+}
+
+.renote-toolbar-item-active {
+  color: var(--renote-color-background);
+  background: var(--renote-color-foreground);
+}

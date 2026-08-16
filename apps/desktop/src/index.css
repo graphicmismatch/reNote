@@ -1,0 +1,632 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--renote-color-background);
+  color: var(--renote-color-foreground);
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-md);
+}
+
+/* Browsers' default `::placeholder` color is a fixed mid-grey tuned to read against a light
+   background — every input in this app correctly inverts its own background/text color per
+   theme (see e.g. TagSummaryPanel.css's `.renote-tag-summary-panel-input`), but without this
+   rule the placeholder hint text stays that same fixed grey regardless, so it reads fine in
+   light mode and goes low-contrast/hard-to-read once the input's own background turns black in
+   dark mode. `currentColor` + opacity (not a fixed hex) is what makes this actually track the
+   theme: light mode's black `--renote-color-foreground` and dark mode's white one both dim to a
+   legible mid-tone against their own theme's background, rather than one fixed color that only
+   works against one of the two. */
+::placeholder {
+  color: currentColor;
+  opacity: 0.5;
+}
+
+.renote-app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.renote-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-image: var(--renote-pinstripe-pattern);
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+  padding: 4px 8px;
+  font-size: var(--renote-font-size-sm);
+  flex-shrink: 0;
+}
+
+.renote-title-bar-label {
+  font-weight: bold;
+}
+
+.renote-title-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.renote-workspace-switcher {
+  position: relative;
+  display: flex;
+}
+
+.renote-workspace-switcher-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: max(280px, 100%);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  padding: 10px;
+  z-index: 1000;
+}
+
+.renote-workspace-switcher-current-path {
+  font-size: var(--renote-font-size-sm);
+  opacity: 0.7;
+  overflow-wrap: break-word;
+}
+
+.renote-workspace-switcher-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: var(--renote-border-width) solid var(--renote-color-border);
+  padding-top: 8px;
+}
+
+.renote-workspace-switcher-recent-title {
+  font-size: var(--renote-font-size-sm);
+  font-weight: bold;
+}
+
+.renote-workspace-switcher-recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.renote-workspace-switcher-recent-item {
+  width: 100%;
+  text-align: left;
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-sm);
+  color: var(--renote-color-foreground);
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  transition:
+    color var(--renote-transition-fast),
+    background-color var(--renote-transition-fast);
+}
+
+.renote-workspace-switcher-recent-item:hover:not(:disabled) {
+  color: var(--renote-color-background);
+  background: var(--renote-color-foreground);
+}
+
+.renote-workspace-switcher-recent-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.renote-app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.renote-sidebar {
+  flex: 0 0 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: var(--renote-border-width) solid var(--renote-color-border);
+}
+
+.renote-sidebar .renote-panel {
+  flex: 1;
+  min-height: 0;
+  border: none;
+}
+
+/* The nav tree is the primary way in/around the app — every other sidebar panel (Search, Tags,
+   Trash) is secondary and usually short, but Notebooks/sections/pages can run long. Splitting
+   the sidebar's height evenly across all four (the base rule above) starved this one panel down
+   to a sliver that could show barely one row before silently clipping the rest via its own
+   internal scroll (overflow: auto on .renote-panel-content) — the tree wasn't broken, it was
+   just nearly invisible, which is what made section disclosure triangles feel unclickable. */
+.renote-sidebar .renote-panel[aria-label="Notebooks"] {
+  flex: 3 1 0%;
+}
+
+.renote-sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+}
+
+.renote-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  position: relative;
+}
+
+/* Covers the canvas (which stays mounted, and keeps rendering its own white "paper" background,
+   even with no page open — see PageEditorView's doc comment) rather than sitting beside it, so
+   there's no split black/white canvas while nothing is selected. Pointer-events stay off so a
+   click doesn't get eaten by an overlay the user has no reason to interact with. */
+.renote-empty-page-state {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  pointer-events: none;
+}
+
+.renote-history-sidebar {
+  flex: 0 0 200px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: var(--renote-border-width) solid var(--renote-color-border);
+}
+
+.renote-history-sidebar .renote-panel {
+  flex: 1;
+  min-height: 0;
+  border: none;
+}
+
+/* The minimap is a fixed-size box — it shouldn't stretch to fill half the sidebar the way
+   the history list (which scrolls) should. Panel sets aria-label from its title prop, so
+   this targets it without depending on the minimap's own internal class names. */
+.renote-history-sidebar .renote-panel[aria-label="Minimap"] {
+  flex: 0 0 auto;
+}
+
+/* The tool-settings panel (color swatches + a width slider) is a compact form, not a
+   scrolling list — same reasoning as the minimap above. Its `aria-label` changes with the
+   active tool's name (e.g. "Pen", "Pixel Eraser"), so this targets its inner content class
+   instead, which is stable across tools. */
+.renote-history-sidebar .renote-panel:has(.renote-tool-settings-panel) {
+  flex: 0 0 auto;
+}
+
+/* Shown when a save was refused because something outside reNote rewrote the page (see
+   PageEditorView's conflict handling). Sits over the top of the canvas rather than in the app
+   chrome: it is about the open page, and it must be impossible to miss, since edits made after
+   it appears are not being saved. */
+.renote-conflict-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+}
+
+.renote-conflict-bar-message {
+  flex: 1;
+  min-width: 0;
+}
+
+.renote-page-editor {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  border-top: var(--renote-border-width) solid var(--renote-color-border);
+  overflow: hidden;
+}
+
+/* The text-box DOM-overlay seam (see PageEditorView.tsx): positioned via a CSS transform
+   computed by cameraToCssTransform. Autosizes to its content in both directions — `width:
+   fit-content` (shrink-to-fit, clamped by the `min-width`/`max-width` PageEditorView sets in
+   world-space pixels) and the default block `height: auto` — rather than being sized to the
+   text box's stored bounds directly; `PageEditorView`'s `ResizeObserver` on this element reads
+   the result back into `object.bounds` as the user types. `box-sizing: border-box` keeps the
+   border inside those clamped dimensions instead of adding to them (the default content-box
+   model would otherwise make the box's painted size disagree with the "cold" Pixi placeholder's
+   border, which draws exactly at `bounds`). No `overflow` needed — height always grows to fit
+   wrapped content instead of clipping/scrolling. */
+.renote-audio-clip-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+
+.renote-text-edit-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: fit-content;
+  transform-origin: top left;
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  /* The default text color and background — PageEditorView.tsx sets `overlay.style.color`/
+     `.background` directly (an inline style, taking precedence over these) whenever the text
+     box's own `TextBoxData.defaultTextColor`/`backgroundColor` is set; these are just what an
+     unconfigured text box falls back to. `.ProseMirror` below inherits this `color` rather than
+     hardcoding the same token itself, which is what lets the inline override actually take
+     effect for the editable content, not just the overlay's own padding/border area. */
+  color: var(--renote-color-foreground);
+}
+
+/* ProseMirror's `EditorView` mounts a bare, unstyled contenteditable div into the overlay
+   above. `white-space: pre-wrap` + `word-wrap: break-word` is what lets the overlay's own
+   `fit-content` width actually work as "grow to fit a short line, wrap and grow taller once a
+   line would exceed max-width" — without an explicit white-space here the box wouldn't have a
+   well-defined "natural" width to shrink-fit to. The 4px padding matches `drawTextBoxView`'s
+   own `x + 4, y + 4` text offset so the caret lands in the same spot the cold placeholder text
+   was drawn at, and `outline: none` drops the browser's default contenteditable focus ring,
+   which this app's chrome doesn't use anywhere else. */
+.renote-text-edit-overlay .ProseMirror {
+  box-sizing: border-box;
+  padding: 4px;
+  outline: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-md);
+  /* `inherit`, not a hardcoded `var(--renote-color-foreground)` — see the overlay's own comment
+     above for why this specific change is what lets a per-textbox default color override work. */
+  color: inherit;
+}
+
+/* Headings and blockquotes are paragraph attrs, not separate node types (see
+   packages/text-editor/src/schema/prosemirror-schema.ts's doc comment on why) — `toDOM` emits
+   them as `data-heading-level`/`data-blockquote-depth` on the same `<p>` every other paragraph
+   uses, styled here purely by attribute selector. */
+.renote-text-edit-overlay .ProseMirror p[data-heading-level="1"] {
+  font-size: 1.8em;
+  font-weight: 600;
+}
+.renote-text-edit-overlay .ProseMirror p[data-heading-level="2"] {
+  font-size: 1.5em;
+  font-weight: 600;
+}
+.renote-text-edit-overlay .ProseMirror p[data-heading-level="3"] {
+  font-size: 1.3em;
+  font-weight: 600;
+}
+.renote-text-edit-overlay .ProseMirror p[data-heading-level="4"],
+.renote-text-edit-overlay .ProseMirror p[data-heading-level="5"],
+.renote-text-edit-overlay .ProseMirror p[data-heading-level="6"] {
+  font-size: 1.1em;
+  font-weight: 600;
+}
+.renote-text-edit-overlay .ProseMirror p[data-blockquote-depth="1"] {
+  border-left: 3px solid var(--renote-color-border);
+  padding-left: 8px;
+}
+.renote-text-edit-overlay .ProseMirror p[data-blockquote-depth="2"] {
+  border-left: 3px solid var(--renote-color-border);
+  padding-left: 16px;
+}
+.renote-text-edit-overlay .ProseMirror p[data-blockquote-depth="3"] {
+  border-left: 3px solid var(--renote-color-border);
+  padding-left: 24px;
+}
+
+/* Synthetic delimiter widgets from markdown-reveal-plugin.ts — shown only around a mark's span
+   while the selection touches it, hidden everywhere else. `pointer-events: none` plus
+   `user-select: none` keep them out of the way of click/selection targeting, matching that
+   they're not part of the actual document (see the plugin's doc comment). Dimmed via the
+   border/foreground token, same "border color as the only differentiation" approach as
+   headings/blockquotes/code below — this app's tokens have no separate muted-text color to draw
+   from. */
+.renote-md-delim {
+  color: var(--renote-color-border);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Inline `code` mark and the `code_block` node (see prosemirror-schema.ts). This app's design
+   tokens are strict black-on-white / white-on-black in both themes (`colorBorder` ===
+   `colorForeground`, no grays — see packages/ui/src/tokens/{light,dark}-theme.ts) — the border
+   itself is the only differentiation available, matching how `.renote-panel` elsewhere in this
+   file uses a border with no background fill rather than a tinted background. */
+.renote-text-edit-overlay .ProseMirror pre {
+  margin: 4px 0;
+  padding: 6px 8px;
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  overflow-x: auto;
+  font-family: monospace;
+  white-space: pre;
+}
+.renote-text-edit-overlay .ProseMirror code {
+  font-family: monospace;
+}
+.renote-text-edit-overlay .ProseMirror pre code {
+  border: none;
+  padding: 0;
+}
+.renote-text-edit-overlay .ProseMirror :not(pre) > code {
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  padding: 0 3px;
+}
+
+/* GFM `table`/`table_row`/`table_cell` nodes (see prosemirror-schema.ts). Header-row styling is
+   pure CSS (`tr:first-child`), not a schema-level distinction — see the `table_cell` node's own
+   doc comment for why there's only one cell type. Border-only, no background tint, for the same
+   black/white-tokens reason as the code block styling above. */
+.renote-text-edit-overlay .ProseMirror table {
+  margin: 4px 0;
+  border-collapse: collapse;
+}
+.renote-text-edit-overlay .ProseMirror td {
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  padding: 4px 8px;
+  min-width: 2em;
+}
+.renote-text-edit-overlay .ProseMirror tr:first-child td {
+  font-weight: 600;
+}
+
+/* The `image` inline atom node (see prosemirror-schema.ts) — capped so a large source image
+   doesn't blow out the text box's own `fit-content` autosize (see the overlay's own doc comment
+   above), matching how the block-level elements above never introduce unbounded growth either. */
+.renote-text-edit-overlay .ProseMirror img {
+  max-width: 100%;
+  max-height: 20em;
+  vertical-align: middle;
+}
+
+/* A `wikilink` mark (see `packages/text-editor/src/schema/prosemirror-schema.ts`) renders as
+   `<a data-wikilink data-page-id>`, deliberately with no `href` so it never triggers the
+   browser's own navigation — an underline is enough to keep it visually distinct from plain
+   text and from an ordinary `link` mark's un-styled `<a href>` (this app has no dedicated link
+   styling yet either; giving wikilinks their own makes them the one mark kind a reader can spot
+   at a glance, matching the plan's "renders distinctly" requirement for Phase 7).
+   Clicking one navigates to its target page (PageEditorView listens for the click itself — the
+   element still has no `href`, so the browser is never involved), hence the pointer cursor and
+   the link color, which matches `text-box-object-type.ts`'s `LINK_COLOR` for the cold view. */
+.ProseMirror a[data-wikilink] {
+  color: #1e5fd9;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The floating toolbar shown above a text box while it's being edited (see PageEditorView.tsx):
+   text-color, background+opacity, default-text-color rows, plus the paragraph-tag picker.
+   Positioned via a translate-only transform (no scale) so it stays a constant on-screen size
+   regardless of camera zoom, unlike .renote-text-edit-overlay itself. `margin-top` is a fixed
+   estimate of the toolbar's own height (it isn't measured — the rows are a known, bounded set),
+   sized to clear it above the text box's own top edge with a little headroom. */
+.renote-text-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+  margin-top: -170px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+}
+
+.renote-text-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.renote-text-toolbar-label {
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-sm);
+  min-width: 70px;
+}
+
+.renote-text-toolbar-swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  cursor: pointer;
+}
+
+.renote-text-toolbar-custom-color {
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  background: none;
+  cursor: pointer;
+}
+
+.renote-text-toolbar-clear-button {
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-sm);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  padding: 1px 4px;
+  cursor: pointer;
+}
+
+.renote-text-toolbar-opacity-slider {
+  width: 100px;
+}
+
+.renote-tag-picker-select {
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-sm);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  border-radius: 0;
+  padding: 2px 4px;
+}
+
+/* The wikilink-autocomplete popover shown while typing `[[query` inside a text box (see
+   PageEditorView.tsx). Positioned with the same translate-only transform as .renote-text-toolbar
+   (both anchor to the text box's own top-left corner), but pushed further above it via a larger
+   negative margin-top so the two don't visually collide when both happen to be showing at once. */
+.renote-wikilink-picker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+  margin-top: -370px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-height: 160px;
+  overflow-y: auto;
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-sm);
+}
+
+.renote-wikilink-picker-label,
+.renote-wikilink-picker-empty {
+  padding: 4px 6px;
+  opacity: 0.6;
+}
+
+.renote-wikilink-picker-item {
+  display: block;
+  width: 100%;
+  padding: 4px 6px;
+  border: none;
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+  background: var(--renote-color-background);
+  color: var(--renote-color-foreground);
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--renote-transition-fast);
+}
+
+.renote-wikilink-picker-item:last-child {
+  border-bottom: none;
+}
+
+.renote-wikilink-picker-item:hover {
+  background: var(--renote-color-border);
+}
+
+.renote-wikilink-picker-create {
+  font-style: italic;
+}
+
+/* The "Notebook > Section" line under a suggestion's page title — a second line inside the same
+   button, so the whole row (title and location alike) stays one click target. */
+.renote-wikilink-picker-location {
+  display: block;
+  opacity: 0.6;
+  font-size: 0.85em;
+}
+
+/* The link-button target picker (see PageEditorView's `openLinkPicker`) reuses the wikilink
+   popover's list styling, with two differences: it sits just BELOW its button rather than far
+   above it (the wikilink popover's -370px offset keeps it clear of the text box being typed
+   into; a button has no such caret to avoid), and it carries its own text input, since there is
+   no editor to type the query into. */
+.renote-link-picker {
+  margin-top: 38px;
+  max-height: 220px;
+  min-width: 240px;
+}
+
+.renote-link-picker-input {
+  padding: 4px 6px;
+  border: none;
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+  background: var(--renote-color-background);
+  color: var(--renote-color-foreground);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.renote-link-picker-input:focus {
+  outline: none;
+}
+
+.renote-link-picker-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Cursor-following ring showing the pixel-eraser/stroke-eraser's current radius (see
+   PageEditorView.tsx) — chrome, not content, so it stays black-and-white regardless of
+   what's being erased. pointer-events: none is load-bearing: this sits on top of the
+   canvas and must never intercept the erase clicks it's illustrating. */
+.renote-eraser-cursor {
+  position: absolute;
+  border-radius: 50%;
+  border: var(--renote-border-width) dashed var(--renote-color-foreground);
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* Select-tool selection outline + move/rotate/scale handles (see PageEditorView.tsx's
+   "Selection outline + move/rotate/scale handles" effect). Positioned via `translate(...)
+   rotate(...) translate(-50%, -50%)` transforms so the box is centered and rotated around its
+   own pivot rather than its top-left corner — pointer-events: none throughout, since SelectTool
+   does all handle hit-testing itself in world space, this only ever draws. */
+.renote-selection-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: var(--renote-border-width) solid var(--renote-color-foreground);
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.renote-selection-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-foreground);
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.renote-selection-handle-rotate {
+  border-radius: 50%;
+}
