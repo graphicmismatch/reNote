@@ -7,3 +7,4 @@ coverage
 pnpm-lock.yaml
 src-tauri/gen
 src-tauri/crates/renote-index/model
+packages/storage-client/src/generated
