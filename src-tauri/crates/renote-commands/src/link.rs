@@ -98,7 +98,7 @@ pub fn resolve_wikilink_target<R: Runtime>(
         0 => WikilinkResolutionDto::NotFound,
         1 => {
             let page = matches.into_iter().next().expect("len checked above");
-            WikilinkResolutionDto::Found { page }
+            WikilinkResolutionDto::Found { page: Box::new(page) }
         }
         _ => WikilinkResolutionDto::Ambiguous { pages: matches },
     })

@@ -1237,7 +1237,7 @@ pub struct ResolveWikilinkTargetRequestDto {
 #[ts(export, export_to = BINDINGS_DIR, rename_all = "camelCase")]
 pub enum WikilinkResolutionDto {
     /// Exactly one existing page in the notebook has this title.
-    Found { page: PageDto },
+    Found { page: Box<PageDto> },
     /// More than one existing page shares this title — the frontend should show a small
     /// disambiguation popover rather than guessing.
     Ambiguous { pages: Vec<PageDto> },
