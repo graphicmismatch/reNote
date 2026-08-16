@@ -169,7 +169,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @renote/desktop build
+      - run: pnpm build
       - run: cargo build --manifest-path src-tauri/Cargo.toml --package renote
 
       - name: Launch under X11 (Xvfb) and confirm the process stays alive
