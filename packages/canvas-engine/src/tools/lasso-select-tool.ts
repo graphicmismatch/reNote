@@ -26,27 +26,40 @@ export class LassoSelectTool implements Tool {
   readonly cursor = "crosshair";
 
   private activePointerId: number | null = null;
-  private path: PolygonPoint[] = [];
+  private _path: PolygonPoint[] = [];
 
   constructor(
     private readonly scene: SceneGraph,
     private readonly selection: SelectionManager,
   ) {}
 
+  /** World-space points captured so far this gesture — read by `PageEditorView`'s live lasso-path
+   *  overlay so the drag itself is visible, not just its result (the polygon is never rendered as
+   *  a scene object — see class doc comment — so a caller has to read it straight off the tool). */
+  get path(): readonly PolygonPoint[] {
+    return this._path;
+  }
+
+  /** Whether a drag is currently in progress — gates the overlay above so it hides between
+   *  gestures instead of showing a stale last-drawn path. */
+  get isDragging(): boolean {
+    return this.activePointerId !== null;
+  }
+
   onPointerDown(event: NormalizedPointerEvent): void {
     if (this.activePointerId !== null) return;
     this.activePointerId = event.pointerId;
-    this.path = [{ x: event.x, y: event.y }];
+    this._path = [{ x: event.x, y: event.y }];
   }
 
   onPointerMove(event: NormalizedPointerEvent): void {
     if (this.activePointerId === null || event.pointerId !== this.activePointerId) return;
-    this.path.push({ x: event.x, y: event.y });
+    this._path.push({ x: event.x, y: event.y });
   }
 
   onPointerUp(event: NormalizedPointerEvent): void {
     if (this.activePointerId === null || event.pointerId !== this.activePointerId) return;
-    this.path.push({ x: event.x, y: event.y });
+    this._path.push({ x: event.x, y: event.y });
     this.finishLasso();
   }
 
@@ -106,6 +119,6 @@ export class LassoSelectTool implements Tool {
 
   private reset(): void {
     this.activePointerId = null;
-    this.path = [];
+    this._path = [];
   }
 }

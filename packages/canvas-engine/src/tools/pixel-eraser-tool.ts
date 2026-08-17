@@ -40,11 +40,13 @@ const DEFAULT_RADIUS = 10;
  * scenario `CompositeCommand` exists to support (mixed Remove+Add+Update sub-commands in one
  * undo step).
  *
- * Like `StrokeEraserTool`, nothing is mutated mid-drag: only the raw path samples are
- * accumulated in `onPointerDown`/`onPointerMove`. All trimming/splitting happens once, in
- * `onPointerUp`, building every sub-command before any of them run (so `UpdateObjectCommand`'s
- * "capture previous state from the live scene" constructor never sees an already-erased
- * mid-gesture state).
+ * Live preview: every path update recomputes the erase (same `eraseFromStroke` used for the real
+ * commit) and applies the resulting commands' `do()` directly to the scene, bypassing the command
+ * stack. Each recompute first reverts the previous frame's preview via those same commands'
+ * `undo()`, so it always runs against true pre-gesture scene state — exactly the corruption
+ * `UpdateObjectCommand`'s "capture previous state from the live scene" constructor doc comment
+ * warns about avoiding. `onPointerUp` reverts the preview once more before building and executing
+ * the real commands through the command stack, so nothing lands in undo history until commit.
  */
 export class PixelEraserTool implements Tool {
   readonly id = "pixel-eraser";
@@ -52,6 +54,7 @@ export class PixelEraserTool implements Tool {
 
   private activePointerId: number | null = null;
   private path: StrokePoint[] = [];
+  private liveCommands: EditableCommand<SceneGraph>[] = [];
   private readonly fallbackRadius: number;
 
   constructor(
@@ -76,21 +79,51 @@ export class PixelEraserTool implements Tool {
     if (this.activePointerId !== null) return;
     this.activePointerId = event.pointerId;
     this.path = [{ x: event.x, y: event.y, pressure: event.pressure }];
+    this.renderLivePreview();
   }
 
   onPointerMove(event: NormalizedPointerEvent): void {
     if (this.activePointerId === null || event.pointerId !== this.activePointerId) return;
     this.path.push({ x: event.x, y: event.y, pressure: event.pressure });
+    this.renderLivePreview();
   }
 
   onPointerUp(event: NormalizedPointerEvent): void {
     if (this.activePointerId === null || event.pointerId !== this.activePointerId) return;
     this.path.push({ x: event.x, y: event.y, pressure: event.pressure });
+    this.restoreLivePreview();
     this.commitErase();
   }
 
   onCancel(): void {
+    this.restoreLivePreview();
     this.reset();
+  }
+
+  /** Recomputes and applies this gesture's erase directly to the scene, for visual feedback
+   *  before the stroke is finished. Always starts by reverting the previous frame's preview
+   *  (see class doc comment) so the recompute runs against true pre-gesture state. */
+  private renderLivePreview(): void {
+    this.restoreLivePreview();
+    if (this.path.length === 0) return;
+
+    const radius = this.currentRadius();
+    const candidateIds = this.scene.spatialIndex.queryRect(this.pathBounds(radius)) as PageObjectId[];
+    const commands: EditableCommand<SceneGraph>[] = [];
+    for (const id of candidateIds) {
+      const object = this.scene.get(id);
+      if (!object || object.type !== "ink-stroke") continue;
+      commands.push(...this.eraseFromStroke(object as InkStrokeEngineObject, radius));
+    }
+    for (const command of commands) command.do(this.scene);
+    this.liveCommands = commands;
+  }
+
+  private restoreLivePreview(): void {
+    for (let i = this.liveCommands.length - 1; i >= 0; i -= 1) {
+      this.liveCommands[i]!.undo(this.scene);
+    }
+    this.liveCommands = [];
   }
 
   private commitErase(): void {

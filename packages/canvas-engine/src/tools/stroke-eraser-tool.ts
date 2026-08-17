@@ -23,10 +23,11 @@ const RADIUS_SAMPLE_COUNT = 8;
  * Erases whole objects the eraser passes over. Hit-tests every pointer-down/move sample against
  * the scene via `SceneGraph.hitTestPoint(x, y, objectTypes)` (the 3-arg overload — real
  * per-type `hitTest`, e.g. an ink stroke's actual path, not just its bounding box), and queues
- * every newly-touched object for removal. Nothing is mutated until `onPointerUp`: all objects
- * touched during one continuous drag are removed via a single `CompositeCommand` wrapping one
- * `RemoveObjectCommand` per object, executed once — so erasing three strokes in one drag is one
- * undo step, not three. An object already queued in this gesture is never re-queued.
+ * every newly-touched object for removal. A touched object is hidden from the scene immediately
+ * (live preview, restored on `onCancel`) but the command stack isn't touched until `onPointerUp`:
+ * all objects touched during one continuous drag are removed via a single `CompositeCommand`
+ * wrapping one `RemoveObjectCommand` per object, executed once — so erasing three strokes in one
+ * drag is one undo step, not three. An object already queued in this gesture is never re-queued.
  *
  * `radius` (live-settable, like `PixelEraserTool`'s — see `ink-settings.ts`) exists because a
  * literal single-point hit test makes thin strokes hard to actually touch; it's a tolerance, not
@@ -76,6 +77,7 @@ export class StrokeEraserTool implements Tool {
   }
 
   onCancel(): void {
+    this.restoreTouched();
     this.reset();
   }
 
@@ -95,7 +97,20 @@ export class StrokeEraserTool implements Tool {
     for (const id of hitIds) {
       if (this.touched.has(id)) continue;
       const object = this.scene.get(id);
-      if (object) this.touched.set(id, object);
+      if (object) {
+        this.touched.set(id, object);
+        // Live preview: hide immediately rather than waiting for onPointerUp's commit. The real
+        // RemoveObjectCommand built in commitErase() re-removes this id, a harmless no-op.
+        this.scene.remove(id);
+      }
+    }
+  }
+
+  /** Restores every touched object's live-preview removal — used when the gesture is cancelled
+   *  before committing, so an aborted erase leaves the scene exactly as it was. */
+  private restoreTouched(): void {
+    for (const object of this.touched.values()) {
+      if (!this.scene.get(object.id)) this.scene.add(object);
     }
   }
 

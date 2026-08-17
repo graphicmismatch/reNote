@@ -11,8 +11,10 @@ import {
   linkButtonWidthFor,
   registerBuiltInObjectTypes,
   registerBuiltInTools,
+  resolvePaperColor,
   type CameraChangedPayload,
   type HandleId,
+  type LassoSelectTool,
   type LinkEditBeginPayload,
   type PointerSourceOverrides,
   type TextEditBeginPayload,
@@ -36,7 +38,7 @@ import {
   type WikilinkTriggerRange,
 } from "@renote/text-editor";
 import type { PageLocationDto, TagDto } from "@renote/storage-client";
-import { applyAutoInkColorForBackground } from "../app-shell/auto-ink-switch.js";
+import { applyAutoInkColorForBackground, isDarkColor } from "../app-shell/auto-ink-switch.js";
 import { useStorageClient } from "../providers/StorageProvider.js";
 import { locationLabel, matchLinkPath, parseLinkPath } from "./link-path.js";
 import {
@@ -1797,6 +1799,11 @@ export function PageEditorView({
   // the engine above actually gets recreated (a page switch), hence mirroring that effect's
   // own notebookId/sectionId/pageId deps here even though this effect doesn't read them
   // directly; it only reads engineRef.current, which those changes indirectly replace.
+  //
+  // Border color contrasts against the page's own paper color, not the app chrome theme — same
+  // reasoning as the lasso-path overlay below (see its own doc comment): a dark paper under a
+  // light-mode app (or vice versa) would otherwise draw this ring in a color that all but
+  // disappears against the page it's illustrating.
   useEffect(() => {
     const container = containerRef.current;
     const engine = engineRef.current;
@@ -1810,6 +1817,11 @@ export function PageEditorView({
 
     let lastClientX = 0;
     let lastClientY = 0;
+
+    const applyBorderColor = () => {
+      const paperColor = resolvePaperColor(engine.getPageBackground().color);
+      cursor.style.borderColor = isDarkColor(paperColor) ? "#ffffff" : "#000000";
+    };
 
     const redraw = () => {
       const rect = container.getBoundingClientRect();
@@ -1831,18 +1843,21 @@ export function PageEditorView({
       cursor.style.display = "none";
     };
 
+    applyBorderColor();
     container.addEventListener("mousemove", handleMouseMove);
     container.addEventListener("mouseleave", handleMouseLeave);
     const unsubscribeCameraForCursor = engine.events.on("camera-changed", redraw);
     const unsubscribeInkSettingsForCursor = engine.inkSettings.events.on("changed", (payload) => {
       if (payload.toolId === activeToolId) redraw();
     });
+    const unsubscribeBackgroundForCursor = engine.events.on("background-changed", applyBorderColor);
 
     return () => {
       container.removeEventListener("mousemove", handleMouseMove);
       container.removeEventListener("mouseleave", handleMouseLeave);
       unsubscribeCameraForCursor();
       unsubscribeInkSettingsForCursor();
+      unsubscribeBackgroundForCursor();
       cursor.remove();
     };
   }, [activeToolId, notebookId, sectionId, pageId, effectiveReloadToken]);
@@ -1850,12 +1865,14 @@ export function PageEditorView({
   // --- Selection outline + move/rotate/scale handles -----------------------
   // Purely visual (pointer-events: none) — `SelectTool` itself does all handle hit-testing
   // through the normal world-space pointer dispatcher (see `selection-geometry.ts`'s doc
-  // comment on why), so this effect only ever redraws, never intercepts input. Only shown while
-  // the select tool is active, same tool-gating as the eraser-radius ring above.
+  // comment on why), so this effect only ever redraws, never intercepts input. Shown for
+  // "select" and "lasso" — both tools populate `engine.selection` and a lasso drag should be
+  // visibly confirmed the moment it completes, not only once the user separately switches to
+  // the select tool.
   useEffect(() => {
     const container = containerRef.current;
     const engine = engineRef.current;
-    if (!container || !engine || activeToolId !== "select") return;
+    if (!container || !engine || (activeToolId !== "select" && activeToolId !== "lasso")) return;
 
     const outline = document.createElement("div");
     outline.className = "renote-selection-overlay";
@@ -1925,6 +1942,77 @@ export function PageEditorView({
       unsubscribeCameraForSelection();
       outline.remove();
       for (const el of handleEls.values()) el.remove();
+    };
+  }, [activeToolId, notebookId, sectionId, pageId, effectiveReloadToken]);
+
+  // --- Live lasso-path overlay ----------------------------------------------
+  // `LassoSelectTool` never renders its drag path as a scene object (see its class doc comment —
+  // the path only ever gets used for the membership test at pointer-up), so without this, a lasso
+  // drag showed nothing on screen until release. Redrawn straight off raw pointer events rather
+  // than an engine event, since the tool has no "path changed" event to listen for — same
+  // "plain DOM overlay, pointer-events: none" pattern as the eraser-radius cursor ring above.
+  //
+  // Stroke color contrasts against the page's own paper color (`getPageBackground`), not the app
+  // chrome theme — same "document property, not a chrome concern" reasoning as
+  // `applyAutoInkColorForBackground`/`resolvePaperColor`'s doc comments: a dark paper with the app
+  // in light mode (or vice versa) would otherwise draw the path in a color that all but
+  // disappears against the page underneath it, which is exactly the "properly visible" this
+  // overlay exists for. Recomputed on "background-changed" alongside every path redraw, rather
+  // than once at mount, so it stays correct if the user edits the background mid-session.
+  useEffect(() => {
+    const container = containerRef.current;
+    const engine = engineRef.current;
+    if (!container || !engine || activeToolId !== "lasso") return;
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.classList.add("renote-lasso-overlay");
+    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    svg.appendChild(polyline);
+    container.appendChild(svg);
+
+    const applyStrokeColor = () => {
+      const paperColor = resolvePaperColor(engine.getPageBackground().color);
+      polyline.style.stroke = isDarkColor(paperColor) ? "#ffffff" : "#000000";
+    };
+
+    const redraw = () => {
+      const tool = engine.tools.active;
+      const lasso = tool && tool.id === "lasso" ? (tool as LassoSelectTool) : null;
+      if (!lasso || !lasso.isDragging || lasso.path.length < 2) {
+        svg.style.display = "none";
+        return;
+      }
+      const camera = engine.getCamera();
+      polyline.setAttribute(
+        "points",
+        lasso.path.map((p) => `${(p.x - camera.x) * camera.zoom},${(p.y - camera.y) * camera.zoom}`).join(" "),
+      );
+      svg.style.display = "block";
+    };
+
+    applyStrokeColor();
+    redraw();
+    // `pointerdown` stays container-scoped (a gesture only starts when the press lands inside the
+    // canvas); `pointermove`/`pointerup`/`pointercancel` are window-scoped so a drag that leaves
+    // the canvas keeps updating and its release is never missed — same reasoning as
+    // `PointerInputDispatcher`'s own constructor doc comment. Registered after that dispatcher's
+    // own listeners (added once at mount, before any tool switch could get this effect running),
+    // so by the time `redraw` runs here the tool's `path` already reflects this same event.
+    container.addEventListener("pointerdown", redraw);
+    window.addEventListener("pointermove", redraw);
+    window.addEventListener("pointerup", redraw);
+    window.addEventListener("pointercancel", redraw);
+    const unsubscribeCamera = engine.events.on("camera-changed", redraw);
+    const unsubscribeBackground = engine.events.on("background-changed", applyStrokeColor);
+
+    return () => {
+      container.removeEventListener("pointerdown", redraw);
+      window.removeEventListener("pointermove", redraw);
+      window.removeEventListener("pointerup", redraw);
+      window.removeEventListener("pointercancel", redraw);
+      unsubscribeCamera();
+      unsubscribeBackground();
+      svg.remove();
     };
   }, [activeToolId, notebookId, sectionId, pageId, effectiveReloadToken]);
 

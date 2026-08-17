@@ -57,6 +57,7 @@ export class PageEngine {
   private dispatcher: PointerInputDispatcher | null = null;
   private camera = { x: 0, y: 0, zoom: 1 };
   private viewport = { width: 0, height: 0 };
+  private background: PageBackground = { color: null, ruleLines: "none" };
   /** Set for the duration of a pan gesture (middle-click or Ctrl+primary-click drag).
    *  Anchored to the screen position and camera at gesture start — see
    *  `computePannedCamera`'s doc comment for why. */
@@ -117,11 +118,22 @@ export class PageEngine {
 
   /** Paper color + rule lines for the current page — see `RendererInterface.setBackground`. */
   setPageBackground(background: PageBackground): void {
+    this.background = background;
     this.renderer.setBackground(background);
+    this.events.emit("background-changed", background);
   }
 
   getCamera(): { x: number; y: number; zoom: number } {
     return { ...this.camera };
+  }
+
+  /** The current page's paper color + rule lines — defaults to `{ color: null, ruleLines: "none" }`
+   *  until `setPageBackground` is first called (e.g. before a page has finished loading). Lets a
+   *  UI affordance (e.g. the lasso drag path) contrast itself against the page's own paper color
+   *  rather than the app chrome theme — see `resolvePaperColor`'s doc comment on why paper color
+   *  is theme-independent — without every consumer having to separately track it via events. */
+  getPageBackground(): PageBackground {
+    return this.background;
   }
 
   private screenToWorld(screenX: number, screenY: number): { x: number; y: number } {

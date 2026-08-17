@@ -100,4 +100,28 @@ describe("StrokeEraserTool", () => {
 
     expect(commands.history).toHaveLength(0);
   });
+
+  it("hides a touched stroke immediately, before the gesture is finished", () => {
+    const { scene, tool } = setUp();
+    const stroke = makeHorizontalStroke(0, 0, 20);
+    scene.add(stroke);
+
+    tool.onPointerDown(pointerEvent({ x: 10, y: 0 }));
+
+    expect(scene.get(stroke.id)).toBeUndefined();
+  });
+
+  it("restores live-hidden strokes on cancel", () => {
+    const { scene, commands, tool } = setUp();
+    const stroke = makeHorizontalStroke(0, 0, 20);
+    scene.add(stroke);
+
+    tool.onPointerDown(pointerEvent({ x: 10, y: 0 }));
+    expect(scene.get(stroke.id)).toBeUndefined();
+
+    tool.onCancel();
+
+    expect(scene.get(stroke.id)).toBeDefined();
+    expect(commands.history).toHaveLength(0);
+  });
 });

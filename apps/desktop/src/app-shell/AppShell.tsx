@@ -103,6 +103,21 @@ const TOOL_LABELS: Record<string, string> = {
   "text-box": "Text Box",
 };
 
+/** Leading glyph shown next to each tool's label on the toolbar button. */
+const TOOL_ICONS: Record<string, string> = {
+  select: "◸",
+  pen: "✎",
+  highlighter: "▬",
+  "stroke-eraser": "⌫",
+  "pixel-eraser": "▦",
+  lasso: "◌",
+  "shape-rectangle": "▭",
+  "shape-ellipse": "○",
+  "shape-line": "╱",
+  "shape-arrow": "↗",
+  "text-box": "T",
+};
+
 /** Which tools carry live `{color, width}` settings (see `engine.inkSettings`) and the
  *  slider bounds for each — select/lasso have neither and show no settings panel at all.
  *  `hasColor: false` for the erasers, whose `width` field doubles as a hit-tolerance/erase
@@ -1637,6 +1652,7 @@ export function AppShell() {
     (toolId: string): ToolbarItem => ({
       id: toolId,
       label: TOOL_LABELS[toolId] ?? toolId,
+      icon: TOOL_ICONS[toolId],
       active: activeToolId === toolId,
       disabled: !engine || !selectedPageId,
       onClick: () => activateTool(toolId),
@@ -2503,6 +2519,7 @@ export function AppShell() {
         {
           id: "insert-image",
           label: "Insert Image",
+          icon: "▨",
           disabled: !engine || !openNotebookId || !selectedSectionId || !selectedPageId,
           onClick: handleInsertImage,
         },
@@ -2511,18 +2528,21 @@ export function AppShell() {
           // Nothing to insert until the notebook actually has a tag — same "only offer it once
           // it can do something" gating the text-edit tag picker itself uses.
           label: "Insert Tag",
+          icon: "#",
           disabled: !engine || !selectedPageId || tags.length === 0,
           onClick: handleInsertTag,
         },
         {
           id: "insert-link",
           label: "Insert Link",
+          icon: "→",
           disabled: !engine || !selectedPageId,
           onClick: handleInsertLink,
         },
         {
           id: "record-audio",
           label: recordingUnavailable ? "Record Audio (unavailable)" : "Record Audio",
+          icon: "●",
           disabled:
             !engine ||
             !openNotebookId ||
@@ -2539,12 +2559,14 @@ export function AppShell() {
         {
           id: "undo",
           label: "Undo",
+          icon: "↺",
           disabled: !engine || !canUndo,
           onClick: () => engine?.commands.undo(),
         },
         {
           id: "redo",
           label: "Redo",
+          icon: "↻",
           disabled: !engine || !canRedo,
           onClick: () => engine?.commands.redo(),
         },
@@ -3191,7 +3213,6 @@ export function AppShell() {
           <ThemeToggle mode={mode} onToggle={toggleTheme} />
         </div>
       </header>
-      <Toolbar groups={toolbarGroups} />
       {viewMode === "graph" ? (
         <GraphView notebookId={openNotebookId} onNavigate={handleGraphNavigate} />
       ) : (
@@ -3253,6 +3274,7 @@ export function AppShell() {
             </aside>
           )}
           <main className="renote-main" onContextMenu={handleCanvasContextMenu}>
+            <Toolbar groups={toolbarGroups} />
             {!selectedPageId && (
               <div className="renote-empty-page-state">
                 <p>

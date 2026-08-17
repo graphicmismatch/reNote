@@ -60,6 +60,25 @@ const DEFAULT_WIDTH = 2;
 const LIVE_PREVIEW_SAMPLES_PER_SEGMENT = 4;
 
 /**
+ * A pointer device can fire `pointermove` faster than the display refreshes (a high-poll-rate
+ * mouse or stylus easily exceeds 60-120Hz), and `renderLivePreview`'s cost grows with the
+ * stroke's current length. Running it synchronously from every event redoes the whole
+ * stroke-so-far's smoothing/tessellation far more often than a frame can ever be shown, which
+ * is what makes a long cursive stroke visibly lag behind the pen. Coalescing to one call per
+ * animation frame caps that to the display's actual refresh rate regardless of event rate.
+ * Falls back to a timer where `requestAnimationFrame` doesn't exist (this package's Node test
+ * environment).
+ * ponytail: still re-smooths/re-tessellates the *entire* stroke-so-far every frame, so a
+ * single very long continuous stroke can still get incrementally slower toward its end.
+ * Upgrade path if that's ever the complaint: cache already-finalized Catmull-Rom segments
+ * (they don't change once enough later points exist) and only recompute the trailing window.
+ */
+const scheduleFrame: (callback: () => void) => void =
+  typeof requestAnimationFrame === "function"
+    ? (callback) => requestAnimationFrame(callback)
+    : (callback) => setTimeout(callback, 16);
+
+/**
  * Freehand ink capture. Accumulates raw pointer samples for the duration of one stroke gesture,
  * then on pointer-up smooths them via `smoothStroke` and commits a single `ink-stroke`
  * `PageObject` through an `AddObjectCommand` so the stroke participates in undo/redo.
@@ -82,6 +101,7 @@ export class PenTool implements Tool {
   private raw: StrokePoint[] = [];
   private activePointerId: number | null = null;
   private livePreviewId: PageObjectId | null = null;
+  private previewFramePending = false;
 
   constructor(
     private readonly scene: SceneGraph,
@@ -110,7 +130,17 @@ export class PenTool implements Tool {
   onPointerMove(event: NormalizedPointerEvent): void {
     if (this.activePointerId === null || event.pointerId !== this.activePointerId) return;
     this.raw.push({ x: event.x, y: event.y, pressure: event.pressure });
-    this.renderLivePreview();
+    this.schedulePreviewRender();
+  }
+
+  /** See `scheduleFrame`'s doc comment: coalesces bursts of `pointermove` into one render per frame. */
+  private schedulePreviewRender(): void {
+    if (this.previewFramePending) return;
+    this.previewFramePending = true;
+    scheduleFrame(() => {
+      this.previewFramePending = false;
+      this.renderLivePreview();
+    });
   }
 
   onPointerUp(event: NormalizedPointerEvent): void {

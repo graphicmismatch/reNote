@@ -1,4 +1,4 @@
-import { EventBus, type Bounds, type PageObjectId } from "@renote/core";
+import { EventBus, type Bounds, type PageBackground, type PageObjectId } from "@renote/core";
 
 /**
  * The DOM-overlay seam for rich text editing. `canvas-engine` cannot depend on
@@ -21,6 +21,10 @@ import { EventBus, type Bounds, type PageObjectId } from "@renote/core";
  *   must re-run `cameraToCssTransform` on it or it visibly detaches from its Pixi placeholder
  *   mid-edit (see `PageEditorView.beginTextEdit`), and a minimap must move/resize its viewport
  *   rectangle. Not fired on `resize` — that changes viewport size, not camera position/zoom.
+ * - `"background-changed"` — fired on every `PageEngine.setPageBackground` call (initial page
+ *   load, and any later edit via the background panel). Payload is the new background. Lets a UI
+ *   affordance drawn over the canvas (e.g. the lasso drag path) recompute its contrast color
+ *   against the page's own paper color without polling `getPageBackground()` on every frame.
  */
 export interface TextEditBeginPayload {
   objectId: PageObjectId;
@@ -74,6 +78,7 @@ export interface PageEngineEvents extends Record<string, unknown> {
    *  window or a sidebar resized). A minimap needs this alongside "camera-changed" to compute
    *  its viewport rectangle, since the rectangle's on-screen size depends on both. */
   "viewport-changed": ViewportChangedPayload;
+  "background-changed": PageBackground;
 }
 
 export type PageEngineEventBus = EventBus<PageEngineEvents>;

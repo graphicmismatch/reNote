@@ -10,6 +10,21 @@ body {
   color: var(--renote-color-foreground);
   font-family: var(--renote-font-family);
   font-size: var(--renote-font-size-md);
+  /* This is a button/click-driven app chrome (toolbar, panel titles, tree rows, dialogs) —
+     dragging across it shouldn't leave stray text selections the way it would on a normal
+     page. Actual editable/copyable content opts back in below. */
+  user-select: none;
+}
+
+/* Opt back into normal text selection wherever the user actually types or reads copyable
+   content: form fields, and the rich-text page editor (`.ProseMirror` is prosemirror's own
+   contenteditable root class — `[contenteditable]` alone would already cover it, but naming it
+   explicitly documents why). */
+input,
+textarea,
+[contenteditable],
+.ProseMirror {
+  user-select: text;
 }
 
 /* Browsers' default `::placeholder` color is a fixed mid-grey tuned to read against a light
@@ -590,13 +605,15 @@ body {
 }
 
 /* Cursor-following ring showing the pixel-eraser/stroke-eraser's current radius (see
-   PageEditorView.tsx) — chrome, not content, so it stays black-and-white regardless of
-   what's being erased. pointer-events: none is load-bearing: this sits on top of the
-   canvas and must never intercept the erase clicks it's illustrating. */
+   PageEditorView.tsx). `border-color` is set inline (`applyBorderColor`), not here: it contrasts
+   against the page's own paper color, not the app chrome theme, so it can't be a theme token —
+   same reasoning as `.renote-lasso-overlay polyline` below. pointer-events: none is load-bearing:
+   this sits on top of the canvas and must never intercept the erase clicks it's illustrating. */
 .renote-eraser-cursor {
   position: absolute;
   border-radius: 50%;
-  border: var(--renote-border-width) dashed var(--renote-color-foreground);
+  border-width: var(--renote-border-width);
+  border-style: dashed;
   pointer-events: none;
   box-sizing: border-box;
 }
@@ -629,4 +646,25 @@ body {
 
 .renote-selection-handle-rotate {
   border-radius: 50%;
+}
+
+/* Live lasso drag path (see PageEditorView.tsx's "Live lasso-path overlay" effect) — an SVG
+   overlay sized to the canvas container, its `<polyline>` points set directly in container-local
+   pixel space. pointer-events: none for the same reason as the overlays above: it only ever
+   illustrates the in-progress drag, never intercepts it. */
+.renote-lasso-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* `stroke` is set inline (`PageEditorView.tsx`'s `applyStrokeColor`), not here: it contrasts
+   against the page's own paper color, not the app chrome theme, so it can't be a theme token. */
+.renote-lasso-overlay polyline {
+  fill: none;
+  stroke-width: var(--renote-border-width);
+  stroke-dasharray: 4 3;
 }

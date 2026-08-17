@@ -1,28 +1,129 @@
+/* Free-floating vertical palette anchored to the drawing area (`.renote-main`, its positioned
+   parent) — `top`/`left` are set inline by the component as the user drags it, clamped to stay
+   within the canvas rather than spill under the sidebars. Styled to match the sidebar's `Panel`
+   windows (pinstripe title strip, same border/shadow-free chrome, same collapse-toggle glyphs)
+   using the same tokens Panel.css uses, rather than importing that file — every pattern
+   component here owns its own CSS. */
 .renote-toolbar {
+  position: absolute;
+  z-index: 3;
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--renote-font-family);
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  border: var(--renote-border-width) solid var(--renote-color-border);
+  box-shadow: 2px 2px 0 var(--renote-color-border);
+}
+
+.renote-toolbar-title-strip {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 4px;
+  padding: 4px 6px;
+  border-bottom: var(--renote-border-width) solid var(--renote-color-border);
+  background-image: var(--renote-pinstripe-pattern);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.renote-toolbar-title-strip:active {
+  cursor: grabbing;
+}
+
+.renote-toolbar-title {
+  font-size: var(--renote-font-size-sm);
+  font-weight: bold;
+  color: var(--renote-color-foreground);
+  background: var(--renote-color-background);
+  padding: 0 4px;
+}
+
+.renote-toolbar-collapse-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
   font-family: var(--renote-font-family);
+  font-size: var(--renote-font-size-sm);
+  line-height: 1;
+  color: var(--renote-color-foreground);
   background: var(--renote-color-background);
   border: var(--renote-border-width) solid var(--renote-color-border);
+  cursor: pointer;
+  transition:
+    color var(--renote-transition-fast),
+    background-color var(--renote-transition-fast);
+}
+
+.renote-toolbar-collapse-toggle:hover {
+  color: var(--renote-color-background);
+  background: var(--renote-color-foreground);
+}
+
+.renote-toolbar-body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
   padding: 4px;
+  max-height: min(70vh, calc(100% - 24px));
+  overflow-y: auto;
 }
 
 .renote-toolbar-group {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
 }
 
 .renote-toolbar-divider {
-  width: var(--renote-border-width);
+  height: var(--renote-border-width);
   align-self: stretch;
-  margin: 0 4px;
+  margin: 4px 0;
   background: var(--renote-color-border);
 }
 
 .renote-toolbar-item {
-  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  font-size: var(--renote-font-size-sm);
+  text-align: left;
+}
+
+.renote-toolbar-item-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  /* Several glyphs used as icons (e.g. the pencil, "✎") have a default *emoji* presentation in
+     this system's font fallback chain and render as small color pictures at icon size, which
+     breaks the chrome's 1-bit pixel-art look. This forces the monochrome *text* presentation
+     for every glyph here instead of hunting per-character for ones that happen not to trigger
+     it (verified by screenshot — `font-variant-emoji: text` is what actually fixed it, not the
+     specific characters chosen). */
+  font-variant-emoji: text;
+  justify-content: center;
+  width: 22px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.renote-toolbar-item-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .renote-toolbar-item-active {

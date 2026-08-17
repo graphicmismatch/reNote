@@ -29,7 +29,13 @@ export function ThemeProvider({ children, defaultMode = "light" }: ThemeProvider
     for (const [name, value] of Object.entries(cssVariables)) {
       document.documentElement.style.setProperty(name, value);
     }
-  }, [tokens]);
+    // Without this, the browser still assumes a light UI for anything it paints itself —
+    // <select>/<input type="number"> chrome, the checkbox tick, scrollbars — and renders that
+    // native chrome with its light palette even though our own CSS sets a dark background/text
+    // on top, which is what made dropdown text unreadable in dark mode (low contrast between our
+    // dark text-on-dark-background CSS and the mismatched light native widget underneath).
+    document.documentElement.style.colorScheme = mode;
+  }, [tokens, mode]);
 
   const value = useMemo<ThemeContextValue>(() => ({ mode, tokens, setMode }), [mode, tokens]);
 

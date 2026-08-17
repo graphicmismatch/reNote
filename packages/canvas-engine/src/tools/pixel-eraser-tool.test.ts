@@ -114,4 +114,31 @@ describe("PixelEraserTool", () => {
     expect(commands.history).toHaveLength(0);
     expect(scene.all.filter((o) => o.type === "ink-stroke")).toHaveLength(1);
   });
+
+  it("trims points live, before the gesture is finished, with nothing on the undo stack yet", () => {
+    const { scene, commands, tool } = setUp();
+    const stroke = makeLongHorizontalStroke();
+    scene.add(stroke);
+
+    tool.onPointerDown(pointerEvent({ x: 0, y: 0 }));
+
+    const live = scene.get(stroke.id) as InkStrokeEngineObject;
+    expect(live.data.points.length).toBeLessThan(101);
+    expect(commands.history).toHaveLength(0);
+  });
+
+  it("reverts the live preview on cancel, leaving the scene untouched", () => {
+    const { scene, commands, tool } = setUp();
+    const stroke = makeLongHorizontalStroke();
+    scene.add(stroke);
+
+    tool.onPointerDown(pointerEvent({ x: 45, y: 0 })); // would split mid-stroke
+    tool.onPointerMove(pointerEvent({ x: 55, y: 0 }));
+    tool.onCancel();
+
+    const restored = scene.get(stroke.id) as InkStrokeEngineObject;
+    expect(restored.data.points).toHaveLength(101);
+    expect(scene.all.filter((o) => o.type === "ink-stroke")).toHaveLength(1);
+    expect(commands.history).toHaveLength(0);
+  });
 });
