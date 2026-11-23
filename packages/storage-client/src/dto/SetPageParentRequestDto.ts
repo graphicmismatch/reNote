@@ -1,0 +1,10 @@
+/**
+ * Request for `set_page_parent` (Phase 11.4 indent/outdent): `parentPageId: null` un-indents the
+ * page to top-level. Never moves the page between sections — that's `move_page`'s job.
+ */
+export type SetPageParentRequestDto = {
+  notebookId: string;
+  sectionId: string;
+  pageId: string;
+  parentPageId: string | null;
+};

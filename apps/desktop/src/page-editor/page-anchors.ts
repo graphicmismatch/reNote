@@ -15,7 +15,7 @@ export interface WikilinkTarget {
 
 /** Plain text of one paragraph-shaped block's runs. Duck-typed against `unknown` for the same
  *  reason `text-box-object-type.ts` duck-types the same shape: this file reads page objects whose
- *  `data` is untyped JSON off the wire. Exported for `fake-storage-client.ts`'s
+ *  `data` is untyped JSON off the wire. Exported for `browser-storage-client.ts`'s
  *  `listTaggedParagraphs`, which needs the same "read a tagged paragraph's own text" extraction
  *  the real backend's `renote_index::paragraph_text` does. */
 export function blockText(block: unknown): string {

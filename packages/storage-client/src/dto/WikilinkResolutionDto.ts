@@ -1,0 +1,13 @@
+import type { PageDto } from "./PageDto";
+
+/**
+ * Response for `resolve_wikilink_target`: a tagged union so the frontend can branch on exactly
+ * which of the three resolution outcomes it got without a separate "how many pages matched"
+ * query. `#[serde(tag = "kind")]` (mirrored by `#[ts(rename_all = ...)]`'s effect on the
+ * variant names below) makes this an internally-tagged enum, which `ts-rs` exports as the
+ * discriminated union `{ kind: "found", page: PageDto } | { kind: "ambiguous", pages: PageDto[] }
+ * | { kind: "notFound" }` — the frontend narrows on `.kind` exactly like it would any other
+ * discriminated union.
+ */
+export type WikilinkResolutionDto =
+  { kind: "found"; page: PageDto } | { kind: "ambiguous"; pages: Array<PageDto> } | { kind: "notFound" };

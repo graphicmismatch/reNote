@@ -6,10 +6,10 @@ import { ThemeProvider } from "@renote/ui";
 import type { StorageClient } from "@renote/storage-client";
 import { PageEditorView } from "./PageEditorView.js";
 import { StorageProvider } from "../providers/StorageProvider.js";
-import { createFakeStorageClient } from "../providers/fake-storage-client.js";
+import { createBrowserStorageClient } from "../providers/browser-storage-client.js";
 
 async function seedPage() {
-  const client = createFakeStorageClient();
+  const client = createBrowserStorageClient();
   const notebook = await client.createNotebook({
     name: "Conflict Test Notebook",
     color: null,

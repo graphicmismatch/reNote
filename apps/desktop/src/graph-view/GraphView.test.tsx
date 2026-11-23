@@ -3,14 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "@renote/ui";
 import { GraphView } from "./GraphView.js";
 import { StorageProvider } from "../providers/StorageProvider.js";
-import { createFakeStorageClient } from "../providers/fake-storage-client.js";
+import { createBrowserStorageClient } from "../providers/browser-storage-client.js";
 
 /** Seeds a notebook with two pages, the first wikilinking to the second — enough to exercise
  *  `GraphView`'s real `collectAllPages`/`listPageLinks` fetch path with a non-empty, non-trivial
  *  (one real edge) fake `listPageLinks` response, per this file's "mounts without throwing given
  *  a fake listPageLinks response" acceptance bar. */
 async function seedLinkedNotebook() {
-  const client = createFakeStorageClient();
+  const client = createBrowserStorageClient();
   const notebook = await client.createNotebook({
     name: "Graph Test Notebook",
     color: null,
@@ -74,7 +74,7 @@ async function seedLinkedNotebook() {
 
 describe("GraphView", () => {
   it("renders the empty state without throwing when there is no open notebook", () => {
-    const client = createFakeStorageClient();
+    const client = createBrowserStorageClient();
     render(
       <StorageProvider client={client}>
         <ThemeProvider>
@@ -109,7 +109,7 @@ describe("GraphView", () => {
   });
 
   it("does not throw when the notebook has pages but no links between them", async () => {
-    const client = createFakeStorageClient();
+    const client = createBrowserStorageClient();
     const notebook = await client.createNotebook({
       name: "Unlinked Notebook",
       color: null,

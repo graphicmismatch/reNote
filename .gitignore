@@ -5,14 +5,6 @@ build/
 *.tsbuildinfo
 coverage/
 
-# Rust
-target/
-Cargo.lock.bak
-
-# Tauri
-src-tauri/target/
-src-tauri/gen/
-
 # OS
 .DS_Store
 Thumbs.db

@@ -1,0 +1,14 @@
+/**
+ * One page's full workspace address — `Notebook > Section > Page`, ids alongside names.
+ * Unambiguous because `crate::naming` keeps each of those three names unique within its parent,
+ * which is what lets the frontend render a link suggestion's whole location and resolve an exact
+ * `[[!Notebook@Section$Page#Heading` path typed anywhere in the workspace.
+ */
+export type PageLocationDto = {
+  pageId: string;
+  pageTitle: string;
+  sectionId: string;
+  sectionName: string;
+  notebookId: string;
+  notebookName: string;
+};

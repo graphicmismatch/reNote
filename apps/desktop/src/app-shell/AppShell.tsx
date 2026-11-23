@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { isTauri } from "@tauri-apps/api/core";
-import { open as openFileDialog, save as saveFileDialog } from "@tauri-apps/plugin-dialog";
 import {
   AddObjectCommand,
   CompositeCommand,
@@ -83,10 +81,9 @@ import {
 } from "../page-editor/clipboard.js";
 import { useStorageClient } from "../providers/StorageProvider.js";
 import { useSettings } from "../providers/SettingsProvider.js";
-import { useWorkspace } from "../providers/WorkspaceProvider.js";
 import { applyAutoInkColorForBackground } from "./auto-ink-switch.js";
 import { tagBoxContent } from "./tag-box-content.js";
-import { WorkspaceSwitcher } from "./WorkspaceSwitcher.js";
+import { downloadBlob, pickFile, printHtml } from "./file-io.js";
 
 /** Human-readable labels for the canvas engine's registered tool ids. */
 const TOOL_LABELS: Record<string, string> = {
@@ -176,19 +173,6 @@ const SELECTION_COMMANDS = new Set([
   "object:convert-to-shape",
   "object:straighten-stroke",
 ]);
-/** Commands whose handlers open a native file dialog, so they are dropped from a context menu
- *  outside a real Tauri WebView — the same guard the command palette applies. */
-const TAURI_ONLY_COMMANDS = new Set([
-  "notebook:backup",
-  "notebook:export-pdf",
-  "section:export-pdf",
-  "page:export-pdf",
-  "page:export-plain-text",
-  "notebook:export-markdown",
-  "section:export-markdown",
-  "page:export-markdown",
-]);
-
 /** Context-menu entries that start a new visual group (a divider is drawn above them). */
 const CONTEXT_MENU_GROUP_STARTS = new Set([
   "edit:delete-objects",
@@ -220,27 +204,9 @@ function reportRename(error: unknown): void {
   window.alert(error instanceof Error ? error.message : String(error));
 }
 
-/** Whether `handleRecordAudio` should use `renote_audio`'s native `cpal`-based capture
- *  (`startNativeAudioCapture`/`stopNativeAudioCapture`) instead of the browser's own
- *  `MediaRecorder`. Linux-only, and only inside a real Tauri WebView (never the fake storage
- *  client's browser-mode testing path, which has no native commands to call): WebKitGTK's
- *  `MediaRecorder` depends on GStreamer plugins (`gst-plugins-rs`' `fmp4`/`isobmff`) that are not
- *  reliably present on a plain Linux desktop install — confirmed live, not hypothetical, via
- *  `GST_DEBUG` output showing the capture pipeline's audio source failing to link
- *  (`not-linked (-1)`) while WebKit itself reports success and produces zero encoded bytes for
- *  any container/codec. `navigator.userAgent` sniffing (rather than e.g. `@tauri-apps/plugin-os`)
- *  is deliberately the cheapest thing that works here: Tauri's three target WebViews report
- *  unambiguous, stable substrings ("X11; Linux" / "Windows" / "Macintosh"), and adding a whole
- *  plugin dependency for a one-line, three-way OS check isn't worth it.
- */
-function shouldUseNativeAudioCapture(): boolean {
-  return isTauri() && navigator.userAgent.includes("Linux");
-}
-
-/** Sanitizes a notebook name into a safe suggested backup file name, mirroring
- *  the character set `renote-storage` itself rejects from filesystem components. */
+/** Sanitizes a notebook name into a safe suggested backup file name. */
 function suggestedBackupFileName(notebookName: string): string {
-  return `${notebookName.trim().replace(/[/\\:*?"<>|]/g, "_") || "notebook"}.renotebackup.zip`;
+  return `${notebookName.trim().replace(/[/\\:*?"<>|]/g, "_") || "notebook"}.renote.json`;
 }
 
 /** Sanitizes a title into a safe suggested export file name, same character set
@@ -456,20 +422,12 @@ interface LastOpen {
 
 const NOTHING_OPEN: LastOpen = { notebookId: null, sectionId: null, pageId: null };
 
-/**
- * What was open when the app last closed, for the workspace being opened now. Scoped by workspace
- * path because ids from one workspace mean nothing in another (see `WorkspaceProvider` — switching
- * workspaces reloads the whole app), so a mismatch restores to "nothing open" instead.
- *
- * Client-local UI state, same reasoning as `SettingsProvider`'s `localStorage` use: not document
- * data, not synced, not worth a Tauri command.
- */
-function loadLastOpen(workspacePath: string): LastOpen {
+/** What was open when the app last closed. Client-local UI state, kept in `localStorage`. */
+function loadLastOpen(): LastOpen {
   try {
     const raw = window.localStorage.getItem(LAST_OPEN_KEY);
     if (!raw) return NOTHING_OPEN;
-    const parsed = JSON.parse(raw) as Partial<LastOpen> & { workspacePath?: unknown };
-    if (parsed.workspacePath !== workspacePath) return NOTHING_OPEN;
+    const parsed = JSON.parse(raw) as Partial<LastOpen>;
     return {
       notebookId: typeof parsed.notebookId === "string" ? parsed.notebookId : null,
       sectionId: typeof parsed.sectionId === "string" ? parsed.sectionId : null,
@@ -482,7 +440,6 @@ function loadLastOpen(workspacePath: string): LastOpen {
 
 export function AppShell() {
   const client = useStorageClient();
-  const { workspacePath } = useWorkspace();
   const { mode, setMode } = useTheme();
   const {
     pointerSourceOverridesRef,
@@ -511,7 +468,7 @@ export function AppShell() {
   const [notebooksRefreshToken, setNotebooksRefreshToken] = useState(0);
   // Restored from the last run so the app reopens where it was left — see `loadLastOpen`. Read
   // once (lazy `useState`), never re-read: from here on these are ordinary selection state.
-  const [lastOpen] = useState(() => loadLastOpen(workspacePath));
+  const [lastOpen] = useState(() => loadLastOpen());
   const [openNotebookId, setOpenNotebookId] = useState<string | null>(lastOpen.notebookId);
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(lastOpen.sectionId);
@@ -577,7 +534,6 @@ export function AppShell() {
       window.localStorage.setItem(
         LAST_OPEN_KEY,
         JSON.stringify({
-          workspacePath,
           notebookId: openNotebookId,
           sectionId: selectedSectionId,
           pageId: selectedPageId,
@@ -587,7 +543,7 @@ export function AppShell() {
       // Same as `SettingsProvider`'s persist: a localStorage write can throw, and all that costs
       // is reopening on nothing.
     }
-  }, [workspacePath, openNotebookId, selectedSectionId, selectedPageId]);
+  }, [openNotebookId, selectedSectionId, selectedPageId]);
 
   useEffect(() => {
     client
@@ -1130,34 +1086,26 @@ export function AppShell() {
   }, [client, openNotebookId, selectedSectionId, selectedPageId]);
 
   const handleBackupNotebook = useCallback(() => {
-    if (!openNotebookId || !isTauri()) return;
+    if (!openNotebookId) return;
     const notebook = notebooks.find((n) => n.id === openNotebookId);
-
-    saveFileDialog({
-      defaultPath: suggestedBackupFileName(notebook?.name ?? "notebook"),
-      filters: [{ name: "reNote Backup", extensions: ["zip"] }],
-    })
-      .then((destPath) => {
-        if (!destPath) return; // user cancelled the dialog
-        return client.exportNotebookBackup({ notebookId: openNotebookId, destPath });
-      })
+    client
+      .exportNotebookBackup({ notebookId: openNotebookId })
+      .then((blob) => downloadBlob(blob, suggestedBackupFileName(notebook?.name ?? "notebook")))
       .catch((error: unknown) => {
         console.error("Failed to back up notebook.", error);
       });
   }, [client, openNotebookId, notebooks]);
 
   const handleRestoreNotebookBackup = useCallback(() => {
-    if (!isTauri()) return;
-
-    openFileDialog({ multiple: false, filters: [{ name: "reNote Backup", extensions: ["zip"] }] })
-      .then((archivePath) => {
-        if (!archivePath || Array.isArray(archivePath)) return; // user cancelled
-        return client.importNotebookBackup({ archivePath }).then(() => {
-          setNotebooksRefreshToken((token) => token + 1);
-        });
+    pickFile(".json,application/json")
+      .then(async (file) => {
+        if (!file) return; // user cancelled
+        await client.importNotebookBackup({ file });
+        setNotebooksRefreshToken((token) => token + 1);
       })
       .catch((error: unknown) => {
         console.error("Failed to restore notebook from backup.", error);
+        window.alert(error instanceof Error ? error.message : String(error));
       });
   }, [client]);
 
@@ -1661,31 +1609,18 @@ export function AppShell() {
   );
 
   // --- Insert Image (Phase 5.9) --------------------------------------------
-  // Native file picker -> read the picked file's bytes -> measure natural dimensions client-side
-  // -> save the bytes as a page asset -> commit a real, undoable "image" object. Only wired for
-  // real Tauri: a plain browser has no native file dialog to drive at all (see this project's
-  // `run-desktop` skill notes on why that specific interaction can't be end-to-end verified
-  // headlessly), so this stays a no-op outside `isTauri()`.
+  // File picker -> save the bytes as a page asset (dimensions probed there) -> commit a real,
+  // undoable "image" object.
   const handleInsertImage = useCallback(() => {
-    if (!engine || !openNotebookId || !selectedSectionId || !selectedPageId || !isTauri()) return;
+    if (!engine || !openNotebookId || !selectedSectionId || !selectedPageId) return;
     const notebookId = openNotebookId;
     const sectionId = selectedSectionId;
     const pageId = selectedPageId;
 
-    openFileDialog({
-      multiple: false,
-      filters: [{ name: "Image", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }],
-    })
-      .then(async (picked) => {
-        if (!picked || Array.isArray(picked)) return; // user cancelled the dialog
-
-        // `picked` is an arbitrary absolute path from the native OS file picker — generally
-        // OUTSIDE the workspace-scoped Tauri asset protocol (a user's photos usually live in
-        // ~/Pictures or ~/Downloads, not inside their reNote workspace folder), so it can't be
-        // read from here via `fetch(convertFileSrc(...))`. `saveImageAsset` reads it itself in
-        // Rust instead (plain filesystem code has no WebView-side scope restriction) and probes
-        // its pixel dimensions server-side while it already has the bytes in hand.
-        const assetRef = await client.saveImageAsset({ notebookId, sectionId, pageId, sourcePath: picked });
+    pickFile("image/png,image/jpeg,image/gif,image/webp")
+      .then(async (file) => {
+        if (!file) return; // user cancelled the picker
+        const assetRef = await client.saveImageAsset({ notebookId, sectionId, pageId, file });
         const { naturalWidth, naturalHeight } = assetRef;
 
         // Center the inserted image in the current viewport, scaled DOWN (never up) so an
@@ -1743,18 +1678,13 @@ export function AppShell() {
   );
 
   // --- Record Audio (Phase 12) ----------------------------------------------
-  // Two capture backends behind one UI: `MediaRecorder` (the plan's original Appendix B design,
-  // still used on Windows/macOS where it works and encodes Opus/AAC "for free") and, on Linux
-  // inside a real Tauri WebView, `renote_audio`'s native `cpal`-based WAV capture — see
-  // `shouldUseNativeAudioCapture`'s doc comment for why that split exists. `nativeCaptureActiveRef`
-  // records which backend `handleRecordAudio` actually started, so `handleStopRecording` (which
-  // has no other way to know) stops the right one. Recorder/stream/flag live in refs, not state:
+  // `MediaRecorder` capture (Opus/AAC, whatever the browser supports). Recorder/stream live in
+  // refs, not state:
   // nothing about them needs to trigger a render, only `isRecording` and the elapsed-seconds tick
   // below do.
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
-  const nativeCaptureActiveRef = useRef(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState(0);
   // Set on the first capture-start failure from either backend (no input device, permission
@@ -1773,21 +1703,6 @@ export function AppShell() {
 
   const handleRecordAudio = useCallback(() => {
     if (!engine || !openNotebookId || !selectedSectionId || !selectedPageId || isRecording) return;
-
-    if (shouldUseNativeAudioCapture()) {
-      client
-        .startNativeAudioCapture()
-        .then(() => {
-          nativeCaptureActiveRef.current = true;
-          setRecordingElapsedSeconds(0);
-          setIsRecording(true);
-        })
-        .catch((error: unknown) => {
-          console.error("Failed to start native audio recording.", error);
-          setRecordingUnavailable(true);
-        });
-      return;
-    }
 
     navigator.mediaDevices
       // Explicitly OFF, not just omitted: a plain `{ audio: true }` request still lets the
@@ -1814,7 +1729,7 @@ export function AppShell() {
         console.error("Failed to start audio recording.", error);
         setRecordingUnavailable(true);
       });
-  }, [client, engine, openNotebookId, selectedSectionId, selectedPageId, isRecording]);
+  }, [engine, openNotebookId, selectedSectionId, selectedPageId, isRecording]);
 
   /** Stops the in-progress recording and, if anything was captured, saves it as a new
    *  "audio-clip" object centered in the viewport — the same "save asset, then insert" split
@@ -1826,22 +1741,6 @@ export function AppShell() {
     const pageId = selectedPageId;
     const durationSeconds = recordingElapsedSeconds;
     setIsRecording(false);
-
-    if (nativeCaptureActiveRef.current) {
-      nativeCaptureActiveRef.current = false;
-      if (!engine || !notebookId || !sectionId || !pageId) return;
-      client
-        .stopNativeAudioCapture({ notebookId, sectionId, pageId })
-        .then((assetPath) => {
-          const bounds = centeredBounds(AUDIO_CLIP_WIDTH, AUDIO_CLIP_HEIGHT);
-          if (!bounds) return;
-          createAudioClipObject(engine, bounds, { assetPath, durationSeconds });
-        })
-        .catch((error: unknown) => {
-          console.error("Failed to save the recorded audio clip.", error);
-        });
-      return;
-    }
 
     // Always stops every track in `finally`-like fashion (both the success and no-op exit paths
     // below release the mic) — leaving it hot is the classic bug this guards against.
@@ -1862,12 +1761,8 @@ export function AppShell() {
         const blob = new Blob(recordingChunksRef.current, { type: recorder.mimeType });
         recordingChunksRef.current = [];
         if (blob.size === 0) {
-          // Confirmed live (not hypothetical): some WebKitGTK/GStreamer combinations report a
-          // "live" audio track that never actually yields encoded bytes for ANY container/codec
-          // — a platform limitation `shouldUseNativeAudioCapture` exists specifically to route
-          // around on Linux. Logged (and marks the feature unavailable) rather than silently
-          // doing nothing, so a non-Linux occurrence of the same class of bug is still
-          // diagnosable instead of looking identical to "the button didn't do anything."
+          // Some browser/OS combinations report a live track that never yields encoded bytes.
+          // Logged (and marks the feature unavailable) rather than silently doing nothing.
           console.error(
             "Recording produced no audio data (0 bytes). This WebView's MediaRecorder/microphone " +
               "capture pipeline isn't producing output. No audio-clip object was created.",
@@ -2030,7 +1925,7 @@ export function AppShell() {
       if (!openNotebookId || !selectedSectionId || !selectedPageId) return;
       if (source.pageId === selectedPageId) return;
       const paths = assetPathsOf(objects);
-      if (paths.length === 0 || !isTauri()) return;
+      if (paths.length === 0) return;
       const remapped = new Map<string, string>();
       for (const sourceAssetPath of paths) {
         try {
@@ -2331,33 +2226,18 @@ export function AppShell() {
   }, [engine, selectedInkStrokes]);
 
   // --- Import/Export (Phase 6) ----------------------------------------------
-  // Native file picker -> read the picked file's text -> ask the backend to shape it into a
-  // text-box object DTO -> commit a real, undoable "text-box" object via the same
-  // `createTextBox` helper the rest of the frontend uses to insert one (see
-  // `register-built-ins.ts`). Only wired for real Tauri, same reasoning as `handleInsertImage`
-  // above.
+  // File picker -> shape the text into a text-box object DTO -> commit a real, undoable
+  // "text-box" object via `createTextBox`. Exports download a file; PDF goes through print.
   const handleImportPlainTextFile = useCallback(() => {
-    if (!engine || !openNotebookId || !selectedSectionId || !selectedPageId || !isTauri()) return;
+    if (!engine || !openNotebookId || !selectedSectionId || !selectedPageId) return;
     const notebookId = openNotebookId;
     const sectionId = selectedSectionId;
     const pageId = selectedPageId;
 
-    openFileDialog({
-      multiple: false,
-      filters: [{ name: "Text", extensions: ["txt", "md"] }],
-    })
-      .then(async (picked) => {
-        if (!picked || Array.isArray(picked)) return; // user cancelled the dialog
-
-        // Same reasoning as `handleInsertImage` above: `picked` is an arbitrary path from the
-        // native file picker, generally outside the workspace-scoped asset protocol, so it's
-        // read server-side by the command itself rather than via `fetch(convertFileSrc(...))`.
-        const objectDto = await client.importPlainTextFile({
-          notebookId,
-          sectionId,
-          pageId,
-          sourcePath: picked,
-        });
+    pickFile(".txt,.md,text/plain,text/markdown")
+      .then(async (file) => {
+        if (!file) return; // user cancelled the picker
+        const objectDto = await client.importPlainTextFile({ notebookId, sectionId, pageId, file });
 
         // Centered in the current viewport, same placement `handleInsertImage` uses — the
         // backend's own default bounds are just a placeholder (it has no viewport to center
@@ -2378,132 +2258,81 @@ export function AppShell() {
   }, [engine, client, openNotebookId, selectedSectionId, selectedPageId]);
 
   const handleExportPagePdf = useCallback(() => {
-    if (!openNotebookId || !selectedSectionId || !selectedPageId || !isTauri()) return;
-    const notebookId = openNotebookId;
-    const sectionId = selectedSectionId;
-    const pageId = selectedPageId;
-    const page = pages.find((p) => p.id === pageId);
-
-    saveFileDialog({
-      defaultPath: suggestedExportFileName(page?.title ?? "page", "pdf"),
-      filters: [{ name: "PDF", extensions: ["pdf"] }],
-    })
-      .then((destPath) => {
-        if (!destPath) return; // user cancelled the dialog
-        return client.exportPagePdf({ notebookId, sectionId, pageId, destPath });
-      })
+    if (!openNotebookId || !selectedSectionId || !selectedPageId) return;
+    client
+      .exportPagePdf({ notebookId: openNotebookId, sectionId: selectedSectionId, pageId: selectedPageId })
+      .then(printHtml)
       .catch((error: unknown) => {
         console.error("Failed to export page as PDF.", error);
       });
-  }, [client, openNotebookId, selectedSectionId, selectedPageId, pages]);
+  }, [client, openNotebookId, selectedSectionId, selectedPageId]);
 
   const handleExportPagePlainText = useCallback(() => {
-    if (!openNotebookId || !selectedSectionId || !selectedPageId || !isTauri()) return;
-    const notebookId = openNotebookId;
-    const sectionId = selectedSectionId;
-    const pageId = selectedPageId;
-    const page = pages.find((p) => p.id === pageId);
-
-    saveFileDialog({
-      defaultPath: suggestedExportFileName(page?.title ?? "page", "txt"),
-      filters: [{ name: "Plain Text", extensions: ["txt"] }],
-    })
-      .then((destPath) => {
-        if (!destPath) return; // user cancelled the dialog
-        return client.exportPagePlainText({ notebookId, sectionId, pageId, destPath });
+    if (!openNotebookId || !selectedSectionId || !selectedPageId) return;
+    const page = pages.find((p) => p.id === selectedPageId);
+    client
+      .exportPagePlainText({
+        notebookId: openNotebookId,
+        sectionId: selectedSectionId,
+        pageId: selectedPageId,
       })
+      .then((blob) => downloadBlob(blob, suggestedExportFileName(page?.title ?? "page", "txt")))
       .catch((error: unknown) => {
         console.error("Failed to export page as plain text.", error);
       });
   }, [client, openNotebookId, selectedSectionId, selectedPageId, pages]);
 
   const handleExportSectionPdf = useCallback(() => {
-    if (!openNotebookId || !selectedSectionId || !isTauri()) return;
-    const notebookId = openNotebookId;
-    const sectionId = selectedSectionId;
-
-    saveFileDialog({
-      defaultPath: suggestedExportFileName("section", "pdf"),
-      filters: [{ name: "PDF", extensions: ["pdf"] }],
-    })
-      .then((destPath) => {
-        if (!destPath) return; // user cancelled the dialog
-        return client.exportSectionPdf({ notebookId, sectionId, destPath });
-      })
+    if (!openNotebookId || !selectedSectionId) return;
+    client
+      .exportSectionPdf({ notebookId: openNotebookId, sectionId: selectedSectionId })
+      .then(printHtml)
       .catch((error: unknown) => {
         console.error("Failed to export section as PDF.", error);
       });
   }, [client, openNotebookId, selectedSectionId]);
 
   const handleExportNotebookPdf = useCallback(() => {
-    if (!openNotebookId || !isTauri()) return;
-    const notebookId = openNotebookId;
-    const notebook = notebooks.find((n) => n.id === notebookId);
-
-    saveFileDialog({
-      defaultPath: suggestedExportFileName(notebook?.name ?? "notebook", "pdf"),
-      filters: [{ name: "PDF", extensions: ["pdf"] }],
-    })
-      .then((destPath) => {
-        if (!destPath) return; // user cancelled the dialog
-        return client.exportNotebookPdf({ notebookId, destPath });
-      })
+    if (!openNotebookId) return;
+    client
+      .exportNotebookPdf({ notebookId: openNotebookId })
+      .then(printHtml)
       .catch((error: unknown) => {
         console.error("Failed to export notebook as PDF.", error);
       });
-  }, [client, openNotebookId, notebooks]);
+  }, [client, openNotebookId]);
 
   const handleExportPageMarkdown = useCallback(() => {
-    if (!openNotebookId || !selectedSectionId || !selectedPageId || !isTauri()) return;
-    const notebookId = openNotebookId;
-    const sectionId = selectedSectionId;
-    const pageId = selectedPageId;
-    const page = pages.find((p) => p.id === pageId);
-
-    saveFileDialog({
-      defaultPath: suggestedExportFileName(page?.title ?? "page", "md"),
-      filters: [{ name: "Markdown", extensions: ["md"] }],
-    })
-      .then((destPath) => {
-        if (!destPath) return; // user cancelled the dialog
-        return client.exportPageMarkdown({ notebookId, sectionId, pageId, destPath });
+    if (!openNotebookId || !selectedSectionId || !selectedPageId) return;
+    const page = pages.find((p) => p.id === selectedPageId);
+    client
+      .exportPageMarkdown({
+        notebookId: openNotebookId,
+        sectionId: selectedSectionId,
+        pageId: selectedPageId,
       })
+      .then((blob) => downloadBlob(blob, suggestedExportFileName(page?.title ?? "page", "md")))
       .catch((error: unknown) => {
         console.error("Failed to export page as Markdown.", error);
       });
   }, [client, openNotebookId, selectedSectionId, selectedPageId, pages]);
 
   const handleExportSectionMarkdown = useCallback(() => {
-    if (!openNotebookId || !selectedSectionId || !isTauri()) return;
-    const notebookId = openNotebookId;
-    const sectionId = selectedSectionId;
-
-    saveFileDialog({
-      defaultPath: suggestedExportFileName("section", "md"),
-      filters: [{ name: "Markdown", extensions: ["md"] }],
-    })
-      .then((destPath) => {
-        if (!destPath) return; // user cancelled the dialog
-        return client.exportSectionMarkdown({ notebookId, sectionId, destPath });
-      })
+    if (!openNotebookId || !selectedSectionId) return;
+    client
+      .exportSectionMarkdown({ notebookId: openNotebookId, sectionId: selectedSectionId })
+      .then((blob) => downloadBlob(blob, suggestedExportFileName("section", "md")))
       .catch((error: unknown) => {
         console.error("Failed to export section as Markdown.", error);
       });
   }, [client, openNotebookId, selectedSectionId]);
 
   const handleExportNotebookMarkdown = useCallback(() => {
-    if (!openNotebookId || !isTauri()) return;
-    const notebookId = openNotebookId;
-    const notebook = notebooks.find((n) => n.id === notebookId);
-
-    saveFileDialog({
-      defaultPath: suggestedExportFileName(notebook?.name ?? "notebook", "md"),
-      filters: [{ name: "Markdown", extensions: ["md"] }],
-    })
-      .then((destPath) => {
-        if (!destPath) return; // user cancelled the dialog
-        return client.exportNotebookMarkdown({ notebookId, destPath });
-      })
+    if (!openNotebookId) return;
+    const notebook = notebooks.find((n) => n.id === openNotebookId);
+    client
+      .exportNotebookMarkdown({ notebookId: openNotebookId })
+      .then((blob) => downloadBlob(blob, suggestedExportFileName(notebook?.name ?? "notebook", "md")))
       .catch((error: unknown) => {
         console.error("Failed to export notebook as Markdown.", error);
       });
@@ -2926,10 +2755,7 @@ export function AppShell() {
         if (command.id === "notebook:trash" && (!openNotebookId || selectedSectionId || selectedPageId)) {
           return false;
         }
-        // Backup/restore rely on native file dialogs, unavailable outside a
-        // real Tauri WebView (see the handlers' own isTauri() guard).
-        if (command.id === "notebook:backup" && (!openNotebookId || !isTauri())) return false;
-        if (command.id === "notebook:restore-backup" && !isTauri()) return false;
+        if (command.id === "notebook:backup" && !openNotebookId) return false;
         if (command.id === "page:edit-background" && !selectedPageId) return false;
         if (
           command.id === "page:record-audio" &&
@@ -2937,18 +2763,16 @@ export function AppShell() {
         ) {
           return false;
         }
-        // Import/export rely on native file dialogs (unavailable outside a real Tauri WebView,
-        // same reasoning as backup/restore above) and each needs the scope its label promises
-        // actually selected: page-scoped needs a selected page, section-scoped a selected
-        // section, notebook-scoped an open notebook.
-        if (command.id === "page:import-plain-text" && (!selectedPageId || !isTauri())) return false;
-        if (command.id === "page:export-pdf" && (!selectedPageId || !isTauri())) return false;
-        if (command.id === "page:export-plain-text" && (!selectedPageId || !isTauri())) return false;
-        if (command.id === "section:export-pdf" && (!selectedSectionId || !isTauri())) return false;
-        if (command.id === "notebook:export-pdf" && (!openNotebookId || !isTauri())) return false;
-        if (command.id === "page:export-markdown" && (!selectedPageId || !isTauri())) return false;
-        if (command.id === "section:export-markdown" && (!selectedSectionId || !isTauri())) return false;
-        if (command.id === "notebook:export-markdown" && (!openNotebookId || !isTauri())) return false;
+        // Import/export each need the scope its label promises actually selected: page-scoped
+        // needs a selected page, section-scoped a selected section, notebook-scoped a notebook.
+        if (command.id === "page:import-plain-text" && !selectedPageId) return false;
+        if (command.id === "page:export-pdf" && !selectedPageId) return false;
+        if (command.id === "page:export-plain-text" && !selectedPageId) return false;
+        if (command.id === "section:export-pdf" && !selectedSectionId) return false;
+        if (command.id === "notebook:export-pdf" && !openNotebookId) return false;
+        if (command.id === "page:export-markdown" && !selectedPageId) return false;
+        if (command.id === "section:export-markdown" && !selectedSectionId) return false;
+        if (command.id === "notebook:export-markdown" && !openNotebookId) return false;
         return true;
       })
       .filter((command) => query === "" || command.label.toLowerCase().includes(query))
@@ -2981,7 +2805,6 @@ export function AppShell() {
     return contextMenu.commandIds.flatMap((id) => {
       const command = allCommands.find((candidate) => candidate.id === id);
       if (!command) return [];
-      if (TAURI_ONLY_COMMANDS.has(id) && !isTauri()) return [];
       return [
         {
           id,
@@ -3194,7 +3017,6 @@ export function AppShell() {
       <header className="renote-title-bar">
         <span className="renote-title-bar-label">reNote</span>
         <div className="renote-title-bar-actions">
-          <WorkspaceSwitcher />
           <PixelButton
             type="button"
             onClick={() => setViewMode((prev) => (prev === "editor" ? "graph" : "editor"))}

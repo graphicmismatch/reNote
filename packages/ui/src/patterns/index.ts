@@ -11,7 +11,6 @@ export * from "./Minimap.js";
 export * from "./ToolSettingsPanel.js";
 export * from "./SettingsDialog.js";
 export * from "./HelpDialog.js";
-export * from "./WorkspacePicker.js";
 export * from "./TagSummaryPanel.js";
 export * from "./AutosavePanel.js";
 export * from "./PageBackgroundPanel.js";

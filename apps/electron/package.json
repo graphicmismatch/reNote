@@ -1,0 +1,54 @@
+{
+  "name": "@renote/electron",
+  "version": "0.1.0",
+  "private": true,
+  "description": "reNote for Windows, macOS and Linux: an Electron shell around the @renote/desktop build.",
+  "author": "reNote contributors <noreply@renote.app>",
+  "main": "main.cjs",
+  "scripts": {
+    "copy-renderer": "node -e \"const fs=require('fs');fs.rmSync('renderer',{recursive:true,force:true});fs.cpSync('../desktop/dist','renderer',{recursive:true})\"",
+    "start": "pnpm copy-renderer && electron .",
+    "dist": "pnpm copy-renderer && electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.renote.app",
+    "productName": "reNote",
+    "files": [
+      "main.cjs",
+      "renderer/**",
+      "build/icon.png"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "syncDesktopName": true
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "reNote records audio clips into your notes."
+      }
+    },
+    "executableName": "renote",
+    "deb": {
+      "packageName": "renote"
+    },
+    "artifactName": "reNote-${version}-${arch}.${ext}"
+  },
+  "desktopName": "renote.desktop",
+  "homepage": "https://github.com/graphicmismatch/reNote"
+}

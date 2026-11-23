@@ -1,68 +1,3 @@
-import {
-  copyPageAsset,
-  deletePageAsset,
-  readAudioAsset,
-  resolveAssetPath,
-  saveAudioAsset,
-  saveImageAsset,
-  type SaveAudioAssetRequest,
-} from "./asset-api.js";
-import { getAutosaveStatus, restoreAutosave, saveAutosave } from "./autosave-api.js";
-import { exportNotebookBackup, importNotebookBackup } from "./backup-api.js";
-import {
-  exportNotebookMarkdown,
-  exportNotebookPdf,
-  exportPageMarkdown,
-  exportPagePdf,
-  exportPagePlainText,
-  exportSectionMarkdown,
-  exportSectionPdf,
-} from "./export-api.js";
-import { importPlainTextFile } from "./import-api.js";
-import {
-  createLinkedPage,
-  listBacklinks,
-  listPageLinks,
-  listPageLocations,
-  resolveWikilinkTarget,
-} from "./link-api.js";
-import { createNotebook, listNotebooks, renameNotebook } from "./notebook-api.js";
-import { startNativeAudioCapture, stopNativeAudioCapture } from "./native-audio-api.js";
-import { findRelatedPages } from "./semantic-api.js";
-import {
-  createPage,
-  listPages,
-  loadPageDocument,
-  movePage,
-  renamePage,
-  reorderPages,
-  savePageObjects,
-  setPageParent,
-  updatePageBackground,
-} from "./page-api.js";
-import { search } from "./search-api.js";
-import {
-  createSection,
-  createSectionGroup,
-  listSectionGroups,
-  listSections,
-  moveSection,
-  moveSectionGroup,
-  renameSection,
-  renameSectionGroup,
-} from "./section-api.js";
-import { createTag, deleteTag, listTaggedParagraphs, listTags, updateTag } from "./tag-api.js";
-import {
-  emptyTrash,
-  emptyTrashEntry,
-  listTrash,
-  restoreFromTrash,
-  trashNotebook,
-  trashPage,
-  trashSection,
-  trashSectionGroup,
-} from "./trash-api.js";
-import { getWorkspacePath, listRecentWorkspacePaths, setWorkspacePath } from "./workspace-api.js";
 import type {
   AssetRefDto,
   AutosaveMetaDto,
@@ -121,8 +56,6 @@ import type {
   SectionDto,
   SectionGroupDto,
   SetPageParentRequestDto,
-  SetWorkspacePathRequestDto,
-  StopNativeAudioCaptureRequestDto,
   TagDto,
   TaggedParagraphDto,
   TrashEntryDto,
@@ -135,13 +68,15 @@ import type {
   WikilinkResolutionDto,
 } from "./types.js";
 
-/**
- * The full storage surface as a single interface, so callers can depend on
- * `StorageClient` instead of importing `invoke`-backed functions directly.
- * `apps/desktop` swaps this for an in-memory fake when it isn't running
- * inside a Tauri WebView (e.g. a plain browser used for visual testing),
- * where `@tauri-apps/api`'s `invoke` has nothing to talk to.
- */
+/** Where a just-recorded audio clip goes. */
+export interface SaveAudioAssetRequest {
+  notebookId: string;
+  sectionId: string;
+  pageId: string;
+  fileName: string;
+}
+
+/** The full storage surface. `apps/desktop` implements it over IndexedDB (`browser-storage-client.ts`). */
 export interface StorageClient {
   listNotebooks(): Promise<NotebookDto[]>;
   createNotebook(request: CreateNotebookRequestDto): Promise<NotebookDto>;
@@ -178,11 +113,8 @@ export interface StorageClient {
   restoreFromTrash(request: RestoreFromTrashRequestDto): Promise<TrashEntryDto>;
   emptyTrashEntry(request: EmptyTrashEntryRequestDto): Promise<void>;
   emptyTrash(): Promise<void>;
-  exportNotebookBackup(request: ExportNotebookBackupRequestDto): Promise<void>;
+  exportNotebookBackup(request: ExportNotebookBackupRequestDto): Promise<Blob>;
   importNotebookBackup(request: ImportNotebookBackupRequestDto): Promise<NotebookDto>;
-  getWorkspacePath(): Promise<string | null>;
-  setWorkspacePath(request: SetWorkspacePathRequestDto): Promise<void>;
-  listRecentWorkspacePaths(): Promise<string[]>;
   listTags(request: ListTagsRequestDto): Promise<TagDto[]>;
   createTag(request: CreateTagRequestDto): Promise<TagDto>;
   updateTag(request: UpdateTagRequestDto): Promise<TagDto>;
@@ -196,32 +128,25 @@ export interface StorageClient {
   /** Overwrites the page's one autosave slot with its current live state. */
   saveAutosave(request: SaveAutosaveRequestDto): Promise<void>;
   saveImageAsset(request: SaveImageAssetRequestDto): Promise<AssetRefDto>;
-  /** Saves a recorded audio clip's bytes, resolving to its `assetPath`. See `saveAudioAsset`'s
-   *  doc comment in `asset-api.ts` for why `bytes` is a second argument rather than a DTO field. */
+  /** Saves a recorded audio clip's bytes, resolving to its `assetPath`. */
   saveAudioAsset(request: SaveAudioAssetRequest, bytes: Uint8Array): Promise<string>;
-  /**
-   * Resolves an `assetPath` to a URL directly loadable by an `<img>`/`PIXI.Assets.load` —
-   * the real client returns a Tauri asset-protocol URL (via `convertFileSrc`); the fake client
-   * returns a `data:` URL instead (see `fake-storage-client.ts`'s own doc comment on that
-   * divergence). Either way, callers never need to know which.
-   */
+  /** Resolves an `assetPath` to a URL an `<img>`/`PIXI.Assets.load` can load directly. */
   resolveAssetPath(request: ResolveAssetPathRequestDto): Promise<string>;
-  /** Raw bytes of an audio clip, for `Blob`/`URL.createObjectURL` playback — see `readAudioAsset`'s
-   *  doc comment in `asset-api.ts` for why audio can't just use `resolveAssetPath` like images do. */
+  /** Raw bytes of an audio clip, for `Blob`/`URL.createObjectURL` playback. */
   readAudioAsset(request: ResolveAssetPathRequestDto): Promise<ArrayBuffer>;
   /** Copies an asset to another page; resolves to the new `assetPath`. */
   copyPageAsset(request: CopyPageAssetRequestDto): Promise<string>;
   deletePageAsset(request: DeletePageAssetRequestDto): Promise<void>;
-  /** See `import-api.ts`'s doc comment: returns a text-box object DTO to insert via
-   *  `AddObjectCommand`, does not itself write anything to storage. */
+  /** Returns a text-box object DTO to insert via `AddObjectCommand`; writes nothing itself. */
   importPlainTextFile(request: ImportPlainTextRequestDto): Promise<PageObjectDto>;
-  exportPagePdf(request: ExportPagePdfRequestDto): Promise<void>;
-  exportSectionPdf(request: ExportSectionPdfRequestDto): Promise<void>;
-  exportNotebookPdf(request: ExportNotebookPdfRequestDto): Promise<void>;
-  exportPagePlainText(request: ExportPagePlainTextRequestDto): Promise<void>;
-  exportPageMarkdown(request: ExportPageMarkdownRequestDto): Promise<void>;
-  exportSectionMarkdown(request: ExportSectionMarkdownRequestDto): Promise<void>;
-  exportNotebookMarkdown(request: ExportNotebookMarkdownRequestDto): Promise<void>;
+  /** Printable HTML; the app prints it (the OS print dialog offers "Save as PDF"). */
+  exportPagePdf(request: ExportPagePdfRequestDto): Promise<string>;
+  exportSectionPdf(request: ExportSectionPdfRequestDto): Promise<string>;
+  exportNotebookPdf(request: ExportNotebookPdfRequestDto): Promise<string>;
+  exportPagePlainText(request: ExportPagePlainTextRequestDto): Promise<Blob>;
+  exportPageMarkdown(request: ExportPageMarkdownRequestDto): Promise<Blob>;
+  exportSectionMarkdown(request: ExportSectionMarkdownRequestDto): Promise<Blob>;
+  exportNotebookMarkdown(request: ExportNotebookMarkdownRequestDto): Promise<Blob>;
   /** Every page linking TO `request.pageId` ("Linked Mentions"), resolved to full `PageDto`s. */
   listBacklinks(request: ListBacklinksRequestDto): Promise<PageDto[]>;
   /** Resolves a typed `[[title` wikilink to a target page within `request.notebookId`. A page
@@ -239,76 +164,4 @@ export interface StorageClient {
   /** Phase 13's local semantic layer: `request.pageId`'s nearest neighbours by embedding
    *  similarity — "Related Notes" for the open page and "Find Similar". */
   findRelatedPages(request: FindRelatedPagesRequestDto): Promise<SearchHitDto[]>;
-  /** Linux/BSD `MediaRecorder` fallback — see `native-audio-api.ts`'s doc comment. Not called
-   *  outside a real Tauri WebView on Linux; the fake client's implementation is never exercised. */
-  startNativeAudioCapture(): Promise<void>;
-  stopNativeAudioCapture(request: StopNativeAudioCaptureRequestDto): Promise<string>;
 }
-
-/** The real implementation, backed by Tauri IPC. Only valid inside a Tauri WebView. */
-export const tauriStorageClient: StorageClient = {
-  listNotebooks,
-  createNotebook,
-  renameNotebook,
-  listSections,
-  listSectionGroups,
-  createSection,
-  createSectionGroup,
-  renameSection,
-  renameSectionGroup,
-  moveSection,
-  moveSectionGroup,
-  listPages,
-  createPage,
-  loadPageDocument,
-  savePageObjects,
-  updatePageBackground,
-  movePage,
-  reorderPages,
-  renamePage,
-  setPageParent,
-  search,
-  trashNotebook,
-  trashSectionGroup,
-  trashSection,
-  trashPage,
-  listTrash,
-  restoreFromTrash,
-  emptyTrashEntry,
-  emptyTrash,
-  exportNotebookBackup,
-  importNotebookBackup,
-  getWorkspacePath,
-  setWorkspacePath,
-  listRecentWorkspacePaths,
-  listTags,
-  createTag,
-  updateTag,
-  deleteTag,
-  listTaggedParagraphs,
-  getAutosaveStatus,
-  restoreAutosave,
-  saveAutosave,
-  saveImageAsset,
-  saveAudioAsset,
-  resolveAssetPath,
-  readAudioAsset,
-  copyPageAsset,
-  deletePageAsset,
-  importPlainTextFile,
-  exportPagePdf,
-  exportSectionPdf,
-  exportNotebookPdf,
-  exportPagePlainText,
-  exportPageMarkdown,
-  exportSectionMarkdown,
-  exportNotebookMarkdown,
-  listBacklinks,
-  resolveWikilinkTarget,
-  createLinkedPage,
-  listPageLinks,
-  listPageLocations,
-  findRelatedPages,
-  startNativeAudioCapture,
-  stopNativeAudioCapture,
-};

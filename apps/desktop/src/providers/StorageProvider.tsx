@@ -1,36 +1,43 @@
-import { isTauri } from "@tauri-apps/api/core";
-import { tauriStorageClient, type StorageClient } from "@renote/storage-client";
-import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { createFakeStorageClient } from "./fake-storage-client.js";
+import type { StorageClient } from "@renote/storage-client";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createBrowserStorageClient } from "./browser-storage-client.js";
+import { openIdbStore } from "./idb-store.js";
 
 const StorageContext = createContext<StorageClient | null>(null);
 
 /**
- * Supplies the app's `StorageClient` — the real Tauri-IPC-backed one inside
- * the packaged app, or an in-memory fake anywhere else (plain browser dev,
- * the `run-desktop` headless-Chrome verification skill). Everything that
- * needs storage should call `useStorageClient()`, never import
- * `@tauri-apps/api` or `tauriStorageClient` directly — that's what keeps
- * the app's navigation/editor code drivable outside a Tauri WebView.
+ * Supplies the app's `StorageClient`, backed by this device's IndexedDB. Renders nothing until the
+ * stored workspace has loaded. Everything that needs storage calls `useStorageClient()`.
  */
 export function StorageProvider({
   children,
   client: clientOverride,
 }: {
   children: ReactNode;
-  /**
-   * Injects a specific `StorageClient` instead of the usual real-or-fake auto-selection —
-   * used by component tests (e.g. `GraphView.test.tsx`) that need to seed known notebook/
-   * section/page data into a `createFakeStorageClient()` instance BEFORE rendering, which
-   * the normal `useMemo`-constructed-internally client makes impossible to reach from outside.
-   * Never set outside tests.
-   */
+  /** Injects a specific client (tests seed a `createBrowserStorageClient()` before rendering). */
   client?: StorageClient;
 }) {
-  const client = useMemo(
-    () => clientOverride ?? (isTauri() ? tauriStorageClient : createFakeStorageClient()),
-    [clientOverride],
-  );
+  const [client, setClient] = useState<StorageClient | null>(clientOverride ?? null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (clientOverride) return;
+    let cancelled = false;
+    openIdbStore()
+      .then((store) => {
+        if (!cancelled) setClient(createBrowserStorageClient(store));
+      })
+      .catch((cause: unknown) => {
+        console.error("Failed to open local storage.", cause);
+        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [clientOverride]);
+
+  if (error) return <p role="alert">reNote can't open this device's storage: {error}</p>;
+  if (!client) return null;
   (window as unknown as { __renoteDebugStorage?: StorageClient }).__renoteDebugStorage = client;
   return <StorageContext.Provider value={client}>{children}</StorageContext.Provider>;
 }
